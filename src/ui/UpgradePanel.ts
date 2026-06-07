@@ -70,6 +70,7 @@ export class UpgradePanel {
     this.scene.input.keyboard?.on('keydown-RIGHT', this.selectNext, this);
     this.scene.input.keyboard?.on('keydown-DOWN', this.selectNext, this);
     this.scene.input.keyboard?.on('keydown-ENTER', this.confirmSelection, this);
+    this.scene.input.keyboard?.on('keydown-SPACE', this.confirmSelection, this);
   }
 
   private unregisterKeyboard(): void {
@@ -78,6 +79,7 @@ export class UpgradePanel {
     this.scene.input.keyboard?.off('keydown-RIGHT', this.selectNext, this);
     this.scene.input.keyboard?.off('keydown-DOWN', this.selectNext, this);
     this.scene.input.keyboard?.off('keydown-ENTER', this.confirmSelection, this);
+    this.scene.input.keyboard?.off('keydown-SPACE', this.confirmSelection, this);
   }
 
   private selectPrevious(): void {

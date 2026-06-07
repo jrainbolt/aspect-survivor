@@ -7,12 +7,13 @@ import { EnemySpawner } from '../managers/EnemySpawner';
 import { UpgradeManager } from '../managers/UpgradeManager';
 import { WaveManager } from '../managers/WaveManager';
 import { XpManager } from '../managers/XpManager';
+import { HIGH_SCORE_KEY } from '../constants/storage';
 import { GameEvents } from '../types/events';
+import { ArenaBorder } from '../ui/ArenaBorder';
 import { Hud } from '../ui/Hud';
+import { PauseMenu } from '../ui/PauseMenu';
 import { UpgradePanel } from '../ui/UpgradePanel';
 import { WeaponManager } from '../weapons/WeaponManager';
-
-const HIGH_SCORE_KEY = 'aspect-survivor.high-score-seconds';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -24,11 +25,15 @@ export class GameScene extends Phaser.Scene {
   private xpManager!: XpManager;
   private upgradeManager!: UpgradeManager;
   private weaponManager!: WeaponManager;
+  private arenaBorder!: ArenaBorder;
   private hud!: Hud;
   private upgradePanel!: UpgradePanel;
+  private pauseMenu!: PauseMenu;
   private startedAt = 0;
   private upgradePausedAt = 0;
+  private pauseStartedAt = 0;
   private isChoosingUpgrade = false;
+  private isPaused = false;
   private highScoreSeconds = 0;
   private gameOverText?: Phaser.GameObjects.Text;
 
@@ -58,14 +63,19 @@ export class GameScene extends Phaser.Scene {
     this.weaponManager = new WeaponManager();
     this.enemySpawner = new EnemySpawner(this, this.enemies, this.waveManager);
     this.xpManager = new XpManager(this, this.player, this.upgradeManager);
+    this.arenaBorder = new ArenaBorder(this);
     this.hud = new Hud(this, this.player);
     this.upgradePanel = new UpgradePanel(this);
+    this.pauseMenu = new PauseMenu(this, () => this.resumeGame(), () => this.exitToMainMenu());
     this.startedAt = this.time.now;
     this.highScoreSeconds = Number(localStorage.getItem(HIGH_SCORE_KEY) ?? 0);
 
     this.registerCollisions();
     this.registerEvents();
+    this.input.keyboard?.on('keydown-ESC', this.togglePause, this);
+    this.input.keyboard?.on('keydown-P', this.togglePause, this);
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
   }
 
   override update(time: number): void {
@@ -73,9 +83,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const elapsedSeconds = ((this.isChoosingUpgrade ? this.upgradePausedAt : time) - this.startedAt) / 1000;
+    const pausedAt = this.isChoosingUpgrade ? this.upgradePausedAt : this.isPaused ? this.pauseStartedAt : time;
+    const elapsedSeconds = (pausedAt - this.startedAt) / 1000;
     this.hud.update(elapsedSeconds, this.highScoreSeconds);
-    if (this.isChoosingUpgrade) {
+    if (this.isChoosingUpgrade || this.isPaused) {
       return;
     }
 
@@ -190,9 +201,55 @@ export class GameScene extends Phaser.Scene {
     this.events.emit(GameEvents.PlayerDied, { survivedSeconds, level: this.player.stats.level });
   }
 
+  private togglePause(): void {
+    if (this.player.stats.hp <= 0 || this.isChoosingUpgrade) {
+      return;
+    }
+
+    if (this.isPaused) {
+      this.resumeGame();
+    } else {
+      this.pauseGame();
+    }
+  }
+
+  private pauseGame(): void {
+    this.isPaused = true;
+    this.pauseStartedAt = this.time.now;
+    this.physics.pause();
+    this.pauseMenu.show();
+  }
+
+  private resumeGame(): void {
+    if (!this.isPaused) {
+      return;
+    }
+
+    this.startedAt += this.time.now - this.pauseStartedAt;
+    this.isPaused = false;
+    this.pauseMenu.destroy();
+    this.physics.resume();
+  }
+
+  private exitToMainMenu(): void {
+    this.pauseMenu.destroy();
+    this.physics.resume();
+    this.scene.start('MainMenuScene');
+  }
+
   private handleResize(gameSize: Phaser.Structs.Size): void {
     this.physics.world.setBounds(0, 0, gameSize.width, gameSize.height);
+    this.arenaBorder.resize(gameSize.width, gameSize.height);
+    this.pauseMenu.resize();
     this.gameOverText?.setPosition(gameSize.width / 2, gameSize.height / 2);
+  }
+
+  private handleShutdown(): void {
+    this.input.keyboard?.off('keydown-ESC', this.togglePause, this);
+    this.input.keyboard?.off('keydown-P', this.togglePause, this);
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+    this.pauseMenu?.destroy();
+    this.upgradePanel?.destroy();
   }
 
   private createCircleTexture(key: string, radius: number, color: number): void {
