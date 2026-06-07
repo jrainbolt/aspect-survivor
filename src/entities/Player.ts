@@ -13,7 +13,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     xpToNextLevel: 12,
   };
 
-  private readonly keys: Record<'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key>;
+  private readonly keys: Record<'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key[]>;
   private invulnerableUntil = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -31,20 +31,36 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.keys = {
-      up: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      down: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      left: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      right: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+      up: [
+        keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+        keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+      ],
+      down: [
+        keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+        keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+      ],
+      left: [
+        keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+        keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+      ],
+      right: [
+        keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+        keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+      ],
     };
   }
 
   update(time: number): void {
-    const x = Number(this.keys.right.isDown) - Number(this.keys.left.isDown);
-    const y = Number(this.keys.down.isDown) - Number(this.keys.up.isDown);
+    const x = Number(this.isDirectionDown('right')) - Number(this.isDirectionDown('left'));
+    const y = Number(this.isDirectionDown('down')) - Number(this.isDirectionDown('up'));
     const direction = new Phaser.Math.Vector2(x, y).normalize();
 
     this.setVelocity(direction.x * this.stats.moveSpeed, direction.y * this.stats.moveSpeed);
     this.setTint(time < this.invulnerableUntil ? 0xffd166 : 0xffffff);
+  }
+
+  private isDirectionDown(direction: keyof Player['keys']): boolean {
+    return this.keys[direction].some((key) => key.isDown);
   }
 
   takeDamage(amount: number, time: number): boolean {
