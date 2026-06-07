@@ -22,7 +22,11 @@ Controls:
 npm run build
 ```
 
-The Vite config uses `base: './'`, so the `dist` output works on GitHub Pages project sites.
+The Vite config uses `/aspect-survivor/` during GitHub Actions builds, so the `dist` output works on the project site at `https://jrainbolt.github.io/aspect-survivor/`.
+
+## Deploy
+
+Push to `main` to run `.github/workflows/deploy.yml`. In the repository settings, set Pages to deploy from `GitHub Actions`, not from the `main` branch root.
 
 ## Architecture
 
