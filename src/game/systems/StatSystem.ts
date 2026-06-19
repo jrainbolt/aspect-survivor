@@ -23,7 +23,10 @@ export class StatSystem {
       {
         id: `character:${character.id}`,
         source: 'character',
-        flat: { maxHp: character.passiveModifiers.maxHpBonus ?? 0 },
+        flat: {
+          maxHp: character.passiveModifiers.maxHpBonus ?? 0,
+          contactDamageReduction: character.passiveModifiers.contactDamageReduction ?? 0,
+        },
         multiply: {
           moveSpeed: character.passiveModifiers.moveSpeedMultiplier ?? 1,
           spellDamageMultiplier: character.passiveModifiers.spellDamageMultiplier ?? 1,
@@ -86,6 +89,7 @@ export class StatSystem {
     stats.pierce = Math.max(0, Math.round(stats.pierce));
     stats.critChance = Phaser.Math.Clamp(stats.critChance, 0, 1);
     stats.cooldownReduction = Phaser.Math.Clamp(stats.cooldownReduction, 0, 0.75);
+    stats.contactDamageReduction = Phaser.Math.Clamp(stats.contactDamageReduction, 0, 0.8);
     stats.xpGain = Math.max(0, stats.xpGain);
     stats.goldGain = Math.max(0, stats.goldGain);
   }

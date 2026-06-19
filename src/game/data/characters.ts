@@ -24,11 +24,11 @@ export const characterDefinitions: Record<CharacterId, CharacterDefinition> = {
   paladin: {
     id: 'paladin',
     displayName: 'Paladin',
-    description: 'A durable front-line fighter wielding a crushing holy hammer.',
+    description: 'An armored front-line fighter who controls space with sword and shield.',
     baseStats: { maxHp: 100, damage: 1, attackSpeed: 1, moveSpeed: 205, spellDamageMultiplier: 1 },
-    startingWeaponId: 'holy-hammer',
-    passiveLabel: '+20 max HP',
-    passiveModifiers: { maxHpBonus: 20 },
+    startingWeaponId: 'sword-shield',
+    passiveLabel: 'Shield Guard: +20 max HP, 20% less contact damage',
+    passiveModifiers: { maxHpBonus: 20, contactDamageReduction: 0.2 },
     visual: { color: 0xf4d35e, accentColor: 0xee964b, shape: 'shield' },
   },
 };

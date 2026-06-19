@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { characters } from '../game/data/characters';
 import { FullscreenSystem } from '../game/systems/FullscreenSystem';
 import { RunStateSystem } from '../game/systems/RunStateSystem';
+import { PaladinVisual } from '../game/visuals/PaladinVisual';
 
 export class CharacterSelectScene extends Phaser.Scene {
   private cards: Phaser.GameObjects.Rectangle[] = [];
@@ -33,7 +34,12 @@ export class CharacterSelectScene extends Phaser.Scene {
       this.cards.push(card);
       const visualX = narrow ? x - cardWidth / 2 + 54 : x;
       const visualY = narrow ? y : y - 92;
-      this.add.circle(visualX, visualY, narrow ? 28 : 34, character.visual.color).setStrokeStyle(5, character.visual.accentColor);
+      if (character.id === 'paladin') {
+        const visual = new PaladinVisual(this, visualX, visualY);
+        visual.setScale(narrow ? 1.15 : 1.35);
+      } else {
+        this.add.circle(visualX, visualY, narrow ? 28 : 34, character.visual.color).setStrokeStyle(5, character.visual.accentColor);
+      }
       this.add.text(narrow ? x - 18 : x, narrow ? y - 52 : y - 35, character.displayName, {
         color: '#ffffff', fontFamily: 'Inter, Arial, sans-serif', fontSize: '22px', fontStyle: '900',
       }).setOrigin(0.5);
@@ -43,7 +49,9 @@ export class CharacterSelectScene extends Phaser.Scene {
         fontFamily: 'Inter, Arial, sans-serif', fontSize: '14px', lineSpacing: 5,
       }).setOrigin(0.5);
       this.add.text(narrow ? x + 36 : x, narrow ? y + 62 : y + 105, character.passiveLabel, {
-        color: '#ffd166', align: 'center', fontFamily: 'Inter, Arial, sans-serif', fontSize: '14px', fontStyle: '800',
+        color: '#ffd166', align: 'center', fixedWidth: narrow ? cardWidth - 130 : cardWidth - 24,
+        wordWrap: { width: narrow ? cardWidth - 140 : cardWidth - 34, useAdvancedWrap: true },
+        fontFamily: 'Inter, Arial, sans-serif', fontSize: '13px', fontStyle: '800',
       }).setOrigin(0.5);
       card.on(Phaser.Input.Events.POINTER_OVER, () => this.select(index));
       card.on(Phaser.Input.Events.POINTER_DOWN, () => this.confirm());

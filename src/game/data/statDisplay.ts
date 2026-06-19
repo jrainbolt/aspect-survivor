@@ -16,6 +16,7 @@ export const statSections: Record<'core' | 'combat' | 'utility', StatDisplayDefi
     { key: 'attackSpeed', label: 'Attack Speed', format: multiplier },
     { key: 'moveSpeed', label: 'Move Speed', format: number },
     { key: 'armor', label: 'Armor', format: number },
+    { key: 'contactDamageReduction', label: 'Contact Guard', format: percent },
     { key: 'hpRegen', label: 'HP Regen', format: (value) => `${number(value)}/s` },
   ],
   combat: [

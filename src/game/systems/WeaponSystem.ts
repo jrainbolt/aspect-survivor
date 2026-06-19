@@ -25,6 +25,7 @@ export class WeaponSystem {
 
     const definition = weaponDefinitions[this.weaponId];
     const direction = new Phaser.Math.Vector2(target.x - player.x, target.y - player.y).normalize();
+    player.setFacing(direction);
     const levelMultiplier = 1 + (this.getWeaponLevel() - 1) * 0.22;
     const typeMultiplier = definition.damageType === 'arcane' ? player.stats.spellDamageMultiplier : 1;
     const baseDamage = definition.baseDamage * player.stats.damage * levelMultiplier * typeMultiplier;

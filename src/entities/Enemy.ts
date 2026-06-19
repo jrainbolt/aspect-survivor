@@ -17,6 +17,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   public readonly kind: EnemyKind;
   public readonly visualColor: number;
   private knockedBackUntil = 0;
+  private stunnedUntil = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
     super(scene, x, y, 'enemy');
@@ -34,6 +35,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   chase(target: Phaser.Math.Vector2): void {
+    if (this.scene.time.now < this.stunnedUntil) {
+      this.setVelocity(0);
+      return;
+    }
     if (this.scene.time.now < this.knockedBackUntil) return;
     const direction = target.clone().subtract(new Phaser.Math.Vector2(this.x, this.y)).normalize();
     this.setVelocity(direction.x * this.stats.speed, direction.y * this.stats.speed);
@@ -56,6 +61,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const direction = new Phaser.Math.Vector2(this.x - source.x, this.y - source.y).normalize();
     this.setVelocity(direction.x * force, direction.y * force);
     this.knockedBackUntil = this.scene.time.now + 140;
+  }
+
+  stun(durationMs: number): void {
+    if (durationMs <= 0) return;
+    this.stunnedUntil = Math.max(this.stunnedUntil, this.scene.time.now + durationMs);
+    this.setVelocity(0);
   }
 
   private applyKindTint(): void {

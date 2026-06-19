@@ -61,6 +61,7 @@ export class RunStateSystem {
   }
 
   private static migrate(state: RunState): void {
+    if ((state.weaponId as string) === 'holy-hammer') state.weaponId = 'sword-shield';
     const legacyStats = state.playerStats as unknown as { hp?: number; currentHp?: number };
     legacyStats.currentHp ??= legacyStats.hp ?? state.playerStats.maxHp;
     state.campRewards ??= { heal: false, weapon: false, blessing: false };

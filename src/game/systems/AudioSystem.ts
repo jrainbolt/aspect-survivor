@@ -5,4 +5,6 @@ export class AudioSystem {
   playPlayerHurt(): void {}
   playBossSpawn(): void {}
   playWeaponFire(): void {}
+  playMeleeSwing(): void {}
+  playShieldBash(): void {}
 }

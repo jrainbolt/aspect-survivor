@@ -11,6 +11,8 @@ import { EffectsSystem } from '../game/systems/EffectsSystem';
 import { FullscreenSystem } from '../game/systems/FullscreenSystem';
 import { NORMAL_ROUND_SECONDS, RunStateSystem } from '../game/systems/RunStateSystem';
 import { RunStatsTracker } from '../game/systems/RunStatsTracker';
+import { MeleeAttackSystem } from '../game/systems/MeleeAttackSystem';
+import { StatSystem } from '../game/systems/StatSystem';
 import { WeaponSystem } from '../game/systems/WeaponSystem';
 import type { DamageSource, RunState } from '../game/types';
 import { EnemySpawner } from '../managers/EnemySpawner';
@@ -23,6 +25,8 @@ import { Hud } from '../ui/Hud';
 import { PauseMenu } from '../ui/PauseMenu';
 import { UpgradePanel } from '../ui/UpgradePanel';
 
+const SHIELD_GUARD_MODIFIER_ID = 'Shield Bash Guard: +15 Armor';
+
 export class GameScene extends Phaser.Scene {
   private state!: RunState;
   private player!: Player;
@@ -30,7 +34,8 @@ export class GameScene extends Phaser.Scene {
   private projectiles!: Phaser.Physics.Arcade.Group;
   private xpOrbs!: Phaser.Physics.Arcade.Group;
   private enemySpawner!: EnemySpawner;
-  private weaponSystem!: WeaponSystem;
+  private weaponSystem?: WeaponSystem;
+  private meleeAttackSystem?: MeleeAttackSystem;
   private blessingSystem!: BlessingSystem;
   private effects!: EffectsSystem;
   private audio = new AudioSystem();
@@ -47,6 +52,7 @@ export class GameScene extends Phaser.Scene {
   private isChoosingUpgrade = false;
   private isPaused = false;
   private roundEnding = false;
+  private shieldGuardExpiresAt = 0;
 
   constructor() { super('GameScene'); }
 
@@ -78,10 +84,19 @@ export class GameScene extends Phaser.Scene {
     this.damageTracker = new DamageTracker(this.state);
     this.runStatsTracker = new RunStatsTracker(this.state);
     this.blessingSystem = new BlessingSystem(() => this.state.blessings);
-    this.weaponSystem = new WeaponSystem(this.state.weaponId, () => this.state.weaponLevel, () => {
-      this.player.playRecoil();
-      this.audio.playWeaponFire();
-    });
+    if (this.state.weaponId === 'sword-shield') {
+      this.meleeAttackSystem = new MeleeAttackSystem(this, () => this.state.weaponLevel, {
+        dealDamage: (enemy, amount, source) => this.handleMeleeHit(enemy, amount, source),
+        onShieldGuard: () => this.activateShieldGuard(),
+        onSwordSwing: () => this.audio.playMeleeSwing(),
+        onShieldBash: () => this.audio.playShieldBash(),
+      });
+    } else {
+      this.weaponSystem = new WeaponSystem(this.state.weaponId, () => this.state.weaponLevel, () => {
+        this.player.playRecoil();
+        this.audio.playWeaponFire();
+      });
+    }
     this.arenaBorder = new ArenaBorder(this);
     this.hud = new Hud(this, this.player);
     this.upgradePanel = new UpgradePanel(this);
@@ -101,6 +116,9 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = false;
     this.roundEnding = false;
     this.boss = undefined;
+    this.weaponSystem = undefined;
+    this.meleeAttackSystem = undefined;
+    this.shieldGuardExpiresAt = 0;
   }
 
   override update(time: number, delta: number): void {
@@ -123,7 +141,8 @@ export class GameScene extends Phaser.Scene {
     this.runStatsTracker.recordHealing(this.player.update(time, delta));
     this.enemySpawner.update(time, elapsed, this.state.roundType);
     this.captureBoss();
-    this.weaponSystem.update(time, this.player, this.enemies, this.projectiles);
+    this.weaponSystem?.update(time, this.player, this.enemies, this.projectiles);
+    this.meleeAttackSystem?.update(time, this.player, this.enemies);
     this.blessingSystem.update(time, (enemy, amount, source) => this.damageEnemy(enemy, amount, source, false));
     this.updateEnemies();
     this.updateProjectiles(time);
@@ -195,6 +214,32 @@ export class GameScene extends Phaser.Scene {
     if (allowEffects) this.audio.playHit();
     this.effects.showDamage(enemy, Math.round(actualDamage), allowEffects ? '#ffffff' : '#ff9f8f');
     if (enemy.takeDamage(amount)) this.killEnemy(enemy);
+  }
+
+  private handleMeleeHit(enemy: Enemy, amount: number, source: DamageSource): void {
+    this.blessingSystem.onHit(this.time.now, enemy, amount, this.enemies,
+      (target, blessingDamage, blessingSource) => this.damageEnemy(target, blessingDamage, blessingSource, false));
+    this.damageEnemy(enemy, amount, source, true);
+  }
+
+  private activateShieldGuard(): void {
+    this.shieldGuardExpiresAt = this.time.now + 1000;
+    this.clearShieldGuard();
+    this.state.temporaryStatModifiers.push({ id: SHIELD_GUARD_MODIFIER_ID, source: 'temporary', flat: { armor: 15 } });
+    StatSystem.syncRunState(this.state);
+    this.player.playGuardFlash();
+    this.events.emit(GameEvents.StatsChanged);
+    this.time.delayedCall(1000, () => {
+      if (this.time.now < this.shieldGuardExpiresAt) return;
+      this.clearShieldGuard();
+      this.events.emit(GameEvents.StatsChanged);
+    });
+  }
+
+  private clearShieldGuard(): void {
+    this.state.temporaryStatModifiers = this.state.temporaryStatModifiers
+      .filter((modifier) => modifier.id !== SHIELD_GUARD_MODIFIER_ID);
+    StatSystem.syncRunState(this.state);
   }
 
   private killEnemy(enemy: Enemy): void {
@@ -287,6 +332,7 @@ export class GameScene extends Phaser.Scene {
     this.pauseMenu.resize();
   }
   private handleShutdown(): void {
+    this.clearShieldGuard();
     this.input.keyboard?.off('keydown-ESC', this.togglePause, this);
     this.input.keyboard?.off('keydown-M', this.togglePause, this);
     this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);

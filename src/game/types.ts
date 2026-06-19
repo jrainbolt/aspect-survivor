@@ -1,7 +1,7 @@
 import type { PlayerStats, PlayerStatValues, StatModifier } from '../types/stats';
 
 export type CharacterId = 'amazon' | 'sorcerer' | 'paladin';
-export type WeaponId = 'javelin' | 'arcane-bolt' | 'holy-hammer';
+export type WeaponId = 'javelin' | 'arcane-bolt' | 'sword-shield';
 export type BlessingId = 'jupiter-spark' | 'mars-bloodletting' | 'neptune-tidal-push';
 export type RoundType = 'normal' | 'boss';
 export type DamageType = 'physical' | 'lightning' | 'bleed' | 'water' | 'holy' | 'arcane' | 'unknown';
@@ -10,6 +10,7 @@ export interface PassiveModifiers {
   moveSpeedMultiplier?: number;
   spellDamageMultiplier?: number;
   maxHpBonus?: number;
+  contactDamageReduction?: number;
 }
 
 export interface PlaceholderVisualConfig {

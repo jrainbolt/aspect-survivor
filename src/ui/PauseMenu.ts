@@ -54,6 +54,7 @@ export class PauseMenu {
     const blessingLines = this.getBlessingLines(state);
     const build = this.createSection(narrow ? left + columnWidth : left, top + 350, narrow ? columnWidth : contentWidth * 0.55, 'Current Build', [
       `Weapon: ${weapon.displayName}  Level ${state.weaponLevel}`,
+      `Passive: ${character.passiveLabel}`,
       ...blessingLines,
     ]);
     const status = this.createSection(narrow ? left : left + contentWidth * 0.58, narrow ? top + 530 : top + 350, narrow ? contentWidth : contentWidth * 0.42, 'Status Effects',

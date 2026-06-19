@@ -18,6 +18,7 @@ export interface PlayerStatValues {
   luck: number;
   cooldownReduction: number;
   spellDamageMultiplier: number;
+  contactDamageReduction: number;
 }
 
 export interface PlayerStats extends PlayerStatValues {
@@ -64,4 +65,5 @@ export const DEFAULT_PLAYER_STATS: PlayerStatValues = {
   luck: 0,
   cooldownReduction: 0,
   spellDamageMultiplier: 1,
+  contactDamageReduction: 0,
 };

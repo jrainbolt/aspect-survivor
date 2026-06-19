@@ -27,7 +27,9 @@ Controls:
 5. Choose a major blessing and complete Act 1.
 6. Review run statistics, records, and damage sources on the run summary screen.
 
-Current weapons are Javelin, Arcane Bolt, and Holy Hammer. Current divine favors come from Jupiter, Mars, and Neptune.
+Current weapons are Javelin, Arcane Bolt, and Sword & Shield. Current divine favors come from Jupiter, Mars, and Neptune.
+
+The Paladin fights at close range. Sword Hack sweeps a short multi-target arc; Shield Bash delivers heavy knockback, briefly stuns enemies, and grants +15 armor for one second when it connects. Shield Guard reduces incoming contact damage by 20%.
 
 ## Player Stats
 
@@ -59,7 +61,7 @@ Push to `main` to run `.github/workflows/deploy.yml`. In repository settings, se
 
 - `src/entities`: player, enemies, projectiles, and XP orbs.
 - `src/game/data`: data-driven character, weapon, and blessing definitions.
-- `src/game/systems`: stat calculation, damage/run tracking, run state, weapons, blessings, effects, saves, fullscreen, and audio preparation.
+- `src/game/systems`: stat calculation, damage/run tracking, run state, projectile and melee weapons, blessings, effects, saves, fullscreen, and audio preparation.
 - `src/managers`: waves, spawning, XP, and level-up upgrades.
 - `src/scenes`: main menu, character select, combat, campfire, blessing, and run-summary flow.
 - `src/ui`: HUD, menu controls, arena frame, pause menu, and level-up panel.
