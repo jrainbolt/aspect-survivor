@@ -1,0 +1,114 @@
+import type { PlayerStats, PlayerStatValues, StatModifier } from '../types/stats';
+
+export type CharacterId = 'amazon' | 'sorcerer' | 'paladin';
+export type WeaponId = 'javelin' | 'arcane-bolt' | 'holy-hammer';
+export type BlessingId = 'jupiter-spark' | 'mars-bloodletting' | 'neptune-tidal-push';
+export type RoundType = 'normal' | 'boss';
+export type DamageType = 'physical' | 'lightning' | 'bleed' | 'water' | 'holy' | 'arcane' | 'unknown';
+
+export interface PassiveModifiers {
+  moveSpeedMultiplier?: number;
+  spellDamageMultiplier?: number;
+  maxHpBonus?: number;
+}
+
+export interface PlaceholderVisualConfig {
+  color: number;
+  accentColor: number;
+  shape: 'circle' | 'diamond' | 'shield';
+}
+
+export interface CharacterDefinition {
+  id: CharacterId;
+  displayName: string;
+  description: string;
+  baseStats: Partial<PlayerStatValues>;
+  startingWeaponId: WeaponId;
+  passiveLabel: string;
+  passiveModifiers: PassiveModifiers;
+  visual: PlaceholderVisualConfig;
+}
+
+export interface WeaponDefinition {
+  id: WeaponId;
+  displayName: string;
+  damageType: DamageType;
+  baseDamage: number;
+  cooldownMs: number;
+  projectileSpeed: number;
+  range: number;
+  pierce: number;
+  knockback: number;
+  projectileColor: number;
+  projectileScale: number;
+}
+
+export type BlessingEffect = 'chain-lightning' | 'bleed' | 'knockback';
+
+export interface BlessingDefinition {
+  id: BlessingId;
+  god: 'Jupiter' | 'Mars' | 'Neptune';
+  displayName: string;
+  description: string;
+  effect: BlessingEffect;
+  color: number;
+}
+
+export interface DamageSourceRecord {
+  sourceId: string;
+  sourceName: string;
+  damageType: DamageType;
+  amount: number;
+}
+
+export type DamageSource = Omit<DamageSourceRecord, 'amount'>;
+export interface DamageEvent extends DamageSource { amount: number; }
+
+export interface RunStatsSnapshot {
+  runStartTime: number;
+  totalSurvivalTime: number;
+  enemiesDefeated: number;
+  elitesDefeated: number;
+  bossesDefeated: number;
+  goldEarned: number;
+  xpCollected: number;
+  levelReached: number;
+  roundsCompleted: number;
+  highestActReached: number;
+  blessingsChosen: number;
+  damageTaken: number;
+  healingReceived: number;
+}
+
+export interface RunState {
+  characterId: CharacterId;
+  currentAct: number;
+  currentRound: number;
+  roundType: RoundType;
+  roundTimer: number;
+  totalSurvivalTime: number;
+  enemiesDefeated: number;
+  gold: number;
+  playerStats: PlayerStats;
+  weaponId: WeaponId;
+  weaponLevel: number;
+  blessings: BlessingId[];
+  permanentStatModifiers: StatModifier[];
+  temporaryStatModifiers: StatModifier[];
+  damageSources: Record<string, DamageSourceRecord>;
+  runStats: RunStatsSnapshot;
+  result?: 'defeat' | 'act-complete';
+  campRewards: {
+    heal: boolean;
+    weapon: boolean;
+    blessing: boolean;
+  };
+}
+
+export interface SaveData {
+  bestSurvivalTime: number;
+  highestAct: number;
+  highestLevel: number;
+  mostEnemiesDefeated: number;
+  mostGoldEarned: number;
+}

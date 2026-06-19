@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { HIGH_SCORE_KEY } from '../constants/storage';
+import { FullscreenSystem } from '../game/systems/FullscreenSystem';
+import { SaveSystem } from '../game/systems/SaveSystem';
 import { MenuButton } from '../ui/MenuButton';
 
 export class MainMenuScene extends Phaser.Scene {
@@ -11,6 +12,9 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.buttons = [];
+    this.selectedIndex = 0;
+    FullscreenSystem.install(this);
     const { width, height } = this.scale;
     this.add.rectangle(0, 0, width, height, 0x111418).setOrigin(0);
     this.createGrid(width, height);
@@ -27,8 +31,10 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height * 0.3 + 54, `BEST ${this.formatTime(this.getHighScore())}`, {
+      .text(width / 2, height * 0.3 + 54, this.getProgressLabel(), {
         color: '#dbe4ee',
+        align: 'center',
+        fixedWidth: Math.max(180, width - 32),
         fontFamily: 'Inter, Arial, sans-serif',
         fontSize: '16px',
         fontStyle: '800',
@@ -36,7 +42,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.buttons = [
-      new MenuButton(this, width / 2, height * 0.56, 'Start', () => this.scene.start('GameScene'), () => this.select(0)),
+      new MenuButton(this, width / 2, height * 0.56, 'Start Run', () => this.scene.start('CharacterSelectScene'), () => this.select(0)),
       new MenuButton(this, width / 2, height * 0.56 + 70, 'Reset Best', () => this.resetHighScore(), () => this.select(1)),
     ];
     this.updateSelection();
@@ -59,12 +65,14 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private resetHighScore(): void {
-    localStorage.removeItem(HIGH_SCORE_KEY);
+    localStorage.removeItem('aspect-survivor.progress');
+    localStorage.removeItem('aspect-survivor.high-score-seconds');
     this.scene.restart();
   }
 
-  private getHighScore(): number {
-    return Number(localStorage.getItem(HIGH_SCORE_KEY) ?? 0);
+  private getProgressLabel(): string {
+    const save = SaveSystem.load();
+    return `BEST ${this.formatTime(save.bestSurvivalTime)}  |  ACT ${save.highestAct}  |  LEVEL ${save.highestLevel}`;
   }
 
   private selectPrevious(): void {

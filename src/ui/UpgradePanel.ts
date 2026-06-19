@@ -24,7 +24,14 @@ export class UpgradePanel {
       fontStyle: '800',
     }).setOrigin(0.5);
 
-    const cards = choices.map((choice, index) => this.createChoiceCard(choice, width / 2 + (index - 1) * 230, height / 2));
+    const narrow = width < 720;
+    title.setY(narrow ? 44 : height / 2 - 145);
+    const cards = choices.map((choice, index) => this.createChoiceCard(
+      choice,
+      narrow ? width / 2 : width / 2 + (index - 1) * 230,
+      narrow ? 150 + index * 170 : height / 2,
+      narrow,
+    ));
     this.container = this.scene.add.container(0, 0, [overlay, title, ...cards]).setDepth(100);
     this.registerKeyboard();
     this.updateSelection();
@@ -38,8 +45,9 @@ export class UpgradePanel {
     this.cards = [];
   }
 
-  private createChoiceCard(choice: UpgradeOption, x: number, y: number): Phaser.GameObjects.Container {
-    const card = this.scene.add.rectangle(0, 0, 204, 150, 0x202630).setStrokeStyle(2, 0x4ecdc4).setInteractive({ useHandCursor: true });
+  private createChoiceCard(choice: UpgradeOption, x: number, y: number, narrow: boolean): Phaser.GameObjects.Container {
+    const card = this.scene.add.rectangle(0, 0, narrow ? Math.min(360, this.scene.scale.width - 36) : 204, narrow ? 132 : 150, 0x202630)
+      .setStrokeStyle(2, 0x4ecdc4).setInteractive({ useHandCursor: true });
     const cardIndex = this.cards.length;
     this.cards.push(card);
 
@@ -53,6 +61,7 @@ export class UpgradePanel {
       color: '#dbe4ee',
       align: 'center',
       fixedWidth: 168,
+      wordWrap: { width: 158, useAdvancedWrap: true },
       fontFamily: 'Inter, Arial, sans-serif',
       fontSize: '15px',
       lineSpacing: 5,

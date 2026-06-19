@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Enemy, type EnemyConfig, type EnemyKind } from '../entities/Enemy';
+import type { RoundType } from '../game/types';
 import type { WaveManager } from './WaveManager';
 
 const enemyConfigs: Record<EnemyKind, EnemyConfig> = {
@@ -31,7 +32,7 @@ const enemyConfigs: Record<EnemyKind, EnemyConfig> = {
 
 export class EnemySpawner {
   private nextSpawnAt = 0;
-  private lastBossMinute = 0;
+  private bossSpawned = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -39,15 +40,17 @@ export class EnemySpawner {
     private readonly waveManager: WaveManager,
   ) {}
 
-  update(time: number, elapsedSeconds: number): void {
-    if (time < this.nextSpawnAt) {
+  update(time: number, elapsedSeconds: number, roundType: RoundType): void {
+    if (roundType === 'boss') {
+      if (!this.bossSpawned) {
+        this.spawn('boss');
+        this.bossSpawned = true;
+      }
       return;
     }
 
-    const bossMinute = Math.floor(elapsedSeconds / 300);
-    if (bossMinute > 0 && bossMinute > this.lastBossMinute) {
-      this.spawn('boss');
-      this.lastBossMinute = bossMinute;
+    if (time < this.nextSpawnAt) {
+      return;
     }
 
     for (let index = 0; index < this.waveManager.getPackSize(elapsedSeconds); index += 1) {

@@ -11,13 +11,18 @@ export interface EnemyConfig {
 }
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
+  private static nextCombatId = 1;
+  public readonly combatId = Enemy.nextCombatId++;
   public readonly stats: EnemyStats;
   public readonly kind: EnemyKind;
+  public readonly visualColor: number;
+  private knockedBackUntil = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
     super(scene, x, y, 'enemy');
     this.kind = config.kind;
     this.stats = { ...config.stats };
+    this.visualColor = config.tint;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -29,6 +34,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   chase(target: Phaser.Math.Vector2): void {
+    if (this.scene.time.now < this.knockedBackUntil) return;
     const direction = target.clone().subtract(new Phaser.Math.Vector2(this.x, this.y)).normalize();
     this.setVelocity(direction.x * this.stats.speed, direction.y * this.stats.speed);
   }
@@ -44,6 +50,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     });
 
     return this.stats.hp <= 0;
+  }
+
+  applyKnockback(source: Phaser.Math.Vector2, force: number): void {
+    const direction = new Phaser.Math.Vector2(this.x - source.x, this.y - source.y).normalize();
+    this.setVelocity(direction.x * force, direction.y * force);
+    this.knockedBackUntil = this.scene.time.now + 140;
   }
 
   private applyKindTint(): void {
