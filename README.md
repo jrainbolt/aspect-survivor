@@ -2,6 +2,8 @@
 
 A fantasy roguelite survival arena game built with Phaser 3, TypeScript, and Vite.
 
+For a prompt-ready inventory of the currently implemented game, see [GAME_STATE.md](GAME_STATE.md). Balance locations are listed in [TUNING.md](TUNING.md).
+
 ## Play
 
 ```bash
@@ -22,7 +24,7 @@ Controls:
 
 1. Choose Amazon, Sorcerer, or Paladin. Each hero has distinct base stats, a passive, and a starting weapon.
 2. Clear three enemy waves in Act 1: 40 enemies in Round 1, 55 in Round 2, and 70 in Round 3.
-3. Visit the campfire after each normal round. Healing, one weapon upgrade, and one divine blessing can each be claimed once per visit.
+3. Visit the campfire after each normal round. Choose or advance a specialization, claim one divine favor, make repeatable shop purchases as gold allows, then start the next encounter.
 4. Defeat the Act Guardian in the boss round.
 5. Defeating the Guardian completes Act 1 and opens the run summary.
 6. Review run statistics, records, and damage sources.
@@ -69,7 +71,7 @@ Push to `main` to run `.github/workflows/deploy.yml`. In repository settings, se
 
 - `src/entities`: player, enemies, projectiles, and XP orbs.
 - `src/game/data`: data-driven character, weapon, blessing, and round definitions.
-- `src/game/systems`: stat calculation, damage/run tracking, run state, projectile and melee weapons, blessings, effects, saves, fullscreen, and audio preparation.
+- `src/game/systems`: stat calculation, damage/run tracking, run state, projectile and melee weapons, boss mechanics, blessings, effects, saves, fullscreen, and generated audio.
 - `src/managers`: round lifecycle, bounded wave spawning, XP, and level-up upgrades.
 - `src/scenes`: main menu, character select, combat, campfire, blessing, and run-summary flow.
 - `src/ui`: HUD, menu controls, arena frame, pause menu, and level-up panel.
