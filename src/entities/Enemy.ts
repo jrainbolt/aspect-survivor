@@ -51,12 +51,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const distance = direction.length();
 
     if (this.kind === 'brute' && this.updateBruteCharge(direction, distance)) return;
-    if (this.kind === 'runner' && distance > 0.01) {
-      direction.normalize();
-      const weave = Math.sin(this.scene.time.now * 0.008 + this.combatId) * 0.58;
-      direction.add(new Phaser.Math.Vector2(-direction.y, direction.x).scale(weave)).normalize();
-      this.setRotation(direction.angle());
-    }
     const contactDistance = Math.max(22, this.displayWidth * 0.32);
     if (distance < contactDistance) {
       if (distance > 0.01) direction.scale(-1 / distance);
@@ -66,6 +60,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       return;
     }
     direction.scale(1 / distance);
+    if (this.kind === 'runner') {
+      const weave = Math.sin(this.scene.time.now * 0.008 + this.combatId) * 0.58;
+      direction.add(new Phaser.Math.Vector2(-direction.y, direction.x).scale(weave)).normalize();
+      this.setRotation(direction.angle());
+    }
     const speed = this.stats.speed * (this.scene.time.now < this.slowedUntil ? this.slowMultiplier : 1);
     this.setVelocity(direction.x * speed, direction.y * speed);
   }
@@ -86,6 +85,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(direction.x * force, direction.y * force);
     this.setRotation(direction.angle());
     this.knockedBackUntil = this.scene.time.now + durationMs;
+  }
+
+  getCombatRadius(): number {
+    const bodyRadius = this.body instanceof Phaser.Physics.Arcade.Body ? this.body.halfWidth : 0;
+    return Math.max(14, bodyRadius, this.displayWidth * 0.38);
   }
 
   takeDamage(amount: number): boolean {

@@ -16,11 +16,14 @@ export class MainMenuScene extends Phaser.Scene {
     this.selectedIndex = 0;
     FullscreenSystem.install(this);
     const { width, height } = this.scale;
+    const compactHeight = height < 560;
+    const titleY = compactHeight ? 82 : height * 0.3;
+    const buttonY = compactHeight ? 175 : height * 0.56;
     this.add.rectangle(0, 0, width, height, 0x111418).setOrigin(0);
     this.createGrid(width, height);
 
     this.add
-      .text(width / 2, height * 0.3, 'Aspect Survivor', {
+      .text(width / 2, titleY, 'Aspect Survivor', {
         color: '#ffffff',
         fontFamily: 'Inter, Arial, sans-serif',
         fontSize: '46px',
@@ -31,7 +34,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height * 0.3 + 54, this.getProgressLabel(), {
+      .text(width / 2, titleY + 54, this.getProgressLabel(), {
         color: '#dbe4ee',
         align: 'center',
         fixedWidth: Math.max(180, width - 32),
@@ -42,14 +45,16 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.buttons = [
-      new MenuButton(this, width / 2, height * 0.56, 'Start Run', () => this.scene.start('CharacterSelectScene'), () => this.select(0)),
-      new MenuButton(this, width / 2, height * 0.56 + 70, 'Reset Best', () => this.resetHighScore(), () => this.select(1)),
+      new MenuButton(this, width / 2, buttonY, 'Start Run', () => this.scene.start('CharacterSelectScene'), () => this.select(0)),
+      new MenuButton(this, width / 2, buttonY + 70, 'Reset Best', () => this.resetHighScore(), () => this.select(1)),
     ];
+    this.createControlsPanel(width, height);
     this.updateSelection();
 
     this.input.keyboard?.on('keydown-UP', this.selectPrevious, this);
     this.input.keyboard?.on('keydown-DOWN', this.selectNext, this);
     this.input.keyboard?.on('keydown-ENTER', this.confirmSelection, this);
+    this.input.keyboard?.on('keydown-SPACE', this.confirmSelection, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
   }
 
@@ -62,6 +67,24 @@ export class MainMenuScene extends Phaser.Scene {
     for (let y = 0; y < height; y += 64) {
       graphics.lineBetween(0, y, width, y);
     }
+  }
+
+  private createControlsPanel(width: number, height: number): void {
+    const panelWidth = Math.min(660, width - 32);
+    const narrow = width < 520;
+    const panelHeight = narrow ? 104 : 78;
+    const y = Math.min(height - panelHeight / 2 - 18, height * 0.84);
+    this.add.rectangle(width / 2, y, panelWidth, panelHeight, 0x171c24, 0.96).setStrokeStyle(1, 0x65522f, 0.9);
+    this.add.text(width / 2, y - 22, 'CONTROLS', {
+      color: '#ffd166', fontFamily: 'Inter, Arial, sans-serif', fontSize: '12px', fontStyle: '900',
+    }).setOrigin(0.5);
+    const controls = narrow
+      ? 'MOVE  WASD / ARROWS\nMENUS  ARROWS + ENTER / SPACE\nPAUSE  ESC / M   ·   FULLSCREEN  F\nATTACK  AUTOMATIC'
+      : 'MOVE  WASD / ARROWS     MENUS  ARROWS + ENTER / SPACE\nPAUSE  ESC / M     FULLSCREEN  F     ATTACK  AUTOMATIC';
+    this.add.text(width / 2, y + (narrow ? 12 : 8), controls, {
+        color: '#dbe4ee', fontFamily: 'Inter, Arial, sans-serif', fontSize: narrow ? '11px' : '13px',
+        fontStyle: '700', align: 'center', fixedWidth: panelWidth - 24, lineSpacing: narrow ? 3 : 6,
+      }).setOrigin(0.5);
   }
 
   private resetHighScore(): void {
@@ -100,6 +123,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.input.keyboard?.off('keydown-UP', this.selectPrevious, this);
     this.input.keyboard?.off('keydown-DOWN', this.selectNext, this);
     this.input.keyboard?.off('keydown-ENTER', this.confirmSelection, this);
+    this.input.keyboard?.off('keydown-SPACE', this.confirmSelection, this);
   }
 
   private formatTime(seconds: number): string {

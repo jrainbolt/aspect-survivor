@@ -26,6 +26,7 @@ export interface MeleeAttackCallbacks {
 export class MeleeAttackSystem {
   private readonly nextAttackAt = new Map<MeleeAttackDefinition['id'], number>();
   private activeAttacks: ActiveAttack[] = [];
+  private nextWindupAt = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -46,11 +47,13 @@ export class MeleeAttackSystem {
     this.activeAttacks = this.activeAttacks.filter((attack) => time < attack.endsAt);
     if (!target) return;
 
-    const distance = Phaser.Math.Distance.Between(player.x, player.y, target.x, target.y);
+    if (time < this.nextWindupAt) return;
+    const distance = this.getSurfaceDistance(player, target);
     const [sword, bash] = SpecializationSystem.getAttacks(this.getSpecialization(), this.getSpecializationLevel());
     if (distance <= sword.range + 16 && time >= (this.nextAttackAt.get(sword.id) ?? 0)
       && !this.activeAttacks.some((attack) => attack.definition.id === sword.id)) {
       this.startAttack(time, player, sword);
+      return;
     }
     if (distance <= bash.range + 18 && time >= (this.nextAttackAt.get(bash.id) ?? 0)
       && !this.activeAttacks.some((attack) => attack.definition.id === bash.id)) {
@@ -72,6 +75,7 @@ export class MeleeAttackSystem {
     });
     const cooldown = definition.cooldownMs * (1 - player.stats.cooldownReduction) / player.stats.attackSpeed;
     this.nextAttackAt.set(definition.id, time + cooldown);
+    this.nextWindupAt = time + Math.min(260, definition.durationMs);
 
     if (definition.shape !== 'bash') {
       if (definition.shape === 'thrust') player.playPikeThrust();
@@ -119,12 +123,15 @@ export class MeleeAttackSystem {
       : new Phaser.Math.Vector2(player.x, player.y);
     const toEnemy = new Phaser.Math.Vector2(enemy.x - origin.x, enemy.y - origin.y);
     const distance = toEnemy.length();
-    if (distance > attack.definition.range + 18) return false;
-    if (Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y) <= 30) return true;
+    const enemyRadius = enemy.getCombatRadius();
+    if (distance - enemyRadius > attack.definition.range + 18) return false;
+    if (this.getSurfaceDistance(player, enemy) <= 30) return true;
     if (attack.definition.shape === 'thrust') {
       const forwardDistance = toEnemy.dot(attack.direction);
       const perpendicularDistance = Math.abs(toEnemy.x * attack.direction.y - toEnemy.y * attack.direction.x);
-      return forwardDistance >= 0 && forwardDistance <= attack.definition.range + 18 && perpendicularDistance <= 30;
+      return forwardDistance >= -enemyRadius
+        && forwardDistance <= attack.definition.range + 18 + enemyRadius
+        && perpendicularDistance <= 30 + enemyRadius;
     }
     const angleDifference = Math.abs(Phaser.Math.Angle.Wrap(toEnemy.angle() - attack.direction.angle()));
     return angleDifference <= Phaser.Math.DegToRad(attack.definition.arcDegrees / 2);
@@ -186,12 +193,16 @@ export class MeleeAttackSystem {
     for (const child of enemies.getChildren()) {
       const enemy = child as Enemy;
       if (!enemy.active) continue;
-      const distance = Phaser.Math.Distance.Squared(player.x, player.y, enemy.x, enemy.y);
+      const distance = this.getSurfaceDistance(player, enemy);
       if (distance < nearestDistance) {
         nearest = enemy;
         nearestDistance = distance;
       }
     }
     return nearest;
+  }
+
+  private getSurfaceDistance(player: Player, enemy: Enemy): number {
+    return Math.max(0, Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y) - enemy.getCombatRadius());
   }
 }

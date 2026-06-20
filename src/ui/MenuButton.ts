@@ -52,7 +52,10 @@ export class MenuButton extends Phaser.GameObjects.Container {
     scene.add.existing(this);
 
     background.on(Phaser.Input.Events.POINTER_OVER, () => this.onHover?.());
-    background.on(Phaser.Input.Events.POINTER_DOWN, () => this.select());
+    background.on(Phaser.Input.Events.POINTER_DOWN, () => {
+      this.onHover?.();
+      this.select();
+    });
   }
 
   setSelected(isSelected: boolean): void {

@@ -22,6 +22,7 @@ import { AudioSystem } from '../game/systems/AudioSystem';
 import { getRoundDefinition } from '../game/data/rounds';
 
 interface TownSceneData { feedback?: string; healing?: number; }
+const TOWN_SELECTION_KEY = 'town-selected-index';
 
 export class TownScene extends Phaser.Scene {
   private buttons: MenuButton[] = [];
@@ -31,6 +32,7 @@ export class TownScene extends Phaser.Scene {
   private feedback = '';
   private healing = 0;
   private readonly audio = new AudioSystem();
+  private blessingButton?: MenuButton;
 
   constructor() { super('TownScene'); }
 
@@ -38,7 +40,8 @@ export class TownScene extends Phaser.Scene {
 
   create(): void {
     this.buttons = [];
-    this.selectedIndex = 0;
+    this.blessingButton = undefined;
+    this.selectedIndex = Number(this.registry.get(TOWN_SELECTION_KEY) ?? 0);
     FullscreenSystem.install(this);
     this.state = RunStateSystem.get(this.registry);
     const { width, height } = this.scale;
@@ -66,6 +69,7 @@ export class TownScene extends Phaser.Scene {
     }
 
     this.updateAvailability();
+    this.selectedIndex = Phaser.Math.Clamp(this.selectedIndex, 0, Math.max(0, this.buttons.length - 1));
     this.updateSelection();
     this.statusText.setText(this.feedback || this.getPreparationSummary());
     if (this.healing > 0) new CombatTextSystem(this).healing(width * (wide ? 0.2 : 0.5), wide ? 235 : 210, this.healing);
@@ -151,40 +155,48 @@ export class TownScene extends Phaser.Scene {
   }
 
   private drawChoicePanel(x: number, y: number, width: number, height: number): void {
-    new FantasyPanel(this, x, y, width, height, 'Merchant & Training');
+    new FantasyPanel(this, x, y, width, height, 'Camp Decisions');
     const top = y - height / 2;
     const compact = height < 500;
     this.buttons = [];
-    this.add.rectangle(x, top + (compact ? 82 : 108), width - 34, compact ? 78 : 116, 0x111720, 0.55).setStrokeStyle(1, 0x65522f, 0.65);
+    const trainingY = top + (compact ? 72 : 110);
+    this.add.rectangle(x, trainingY, width - 34, compact ? 48 : 112, 0x111720, 0.55).setStrokeStyle(1, 0x65522f, 0.65);
+    this.add.text(x, top + (compact ? 47 : 57), 'WEAPON SPECIALIZATION', fantasyText(12, '#d8ad55', '900')).setOrigin(0.5);
     if (this.state.characterId === 'paladin' && !this.state.specializationId) {
-      this.add.text(x, top + 58, 'CHOOSE YOUR PATH', fantasyText(12, '#d8ad55', '900')).setOrigin(0.5);
       const specWidth = compact ? (width - 44) / 3 : Math.min(190, (width - 64) / 3);
       specializations.forEach((specialization, index) => {
         const buttonIndex = this.buttons.length;
         const specX = x + (index - 1) * (specWidth + 8);
-        this.buttons.push(new MenuButton(this, specX, top + (compact ? 82 : 110), specialization.displayName,
+        this.buttons.push(new MenuButton(this, specX, trainingY + (compact ? 5 : 0), specialization.displayName,
           () => this.chooseSpecialization(specialization.id), () => this.select(buttonIndex),
-          { width: specWidth, height: compact ? 50 : 88, subtitle: compact ? specialization.rangeLabel : specialization.choiceSummary, accent: specialization.color }));
+          { width: specWidth, height: compact ? 36 : 76, subtitle: compact ? undefined : specialization.choiceSummary, accent: specialization.color }));
       });
     } else if (this.state.specializationId && this.state.specializationLevel < SpecializationSystem.maxLevel) {
       const specialization = specializationDefinitions[this.state.specializationId];
-      this.add.text(x, top + 53, `CURRENT PATH  ·  ${specialization.displayName} ${this.roman(this.state.specializationLevel)}`,
+      this.add.text(x, top + (compact ? 58 : 78), `CURRENT PATH  ·  ${specialization.displayName} ${this.roman(this.state.specializationLevel)}`,
         fantasyText(12, `#${specialization.color.toString(16).padStart(6, '0')}`, '900')).setOrigin(0.5);
       const buttonIndex = this.buttons.length;
-      const advance = new MenuButton(this, x, top + (compact ? 88 : 110), `Advance ${specialization.displayName} ${this.roman(this.state.specializationLevel + 1)}`,
+      const advance = new MenuButton(this, x, trainingY + (compact ? 8 : 16), `Advance ${specialization.displayName} ${this.roman(this.state.specializationLevel + 1)}`,
         () => this.advanceSpecialization(), () => this.select(buttonIndex),
-        { width: Math.min(430, width - 70), height: compact ? 54 : 76, subtitle: compact ? specialization.rangeLabel : specialization.choiceSummary, accent: specialization.color });
+        { width: Math.min(430, width - 70), height: compact ? 34 : 58, subtitle: compact ? undefined : specialization.choiceSummary, accent: specialization.color });
       advance.setDisabled(this.state.campRewards.specialization);
       this.buttons.push(advance);
     } else {
-      this.add.text(x, top + 88, `PATH MASTERED  ·  ${this.state.specializationId ? `${specializationDefinitions[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'Standard Armament'}`,
+      this.add.text(x, trainingY + 4, `PATH MASTERED  ·  ${this.state.specializationId ? `${specializationDefinitions[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'Standard Armament'}`,
         fantasyText(14, '#d8ad55', '900')).setOrigin(0.5);
     }
-    const choosingPath = this.state.characterId === 'paladin' && !this.state.specializationId;
-    const hasTraining = choosingPath || Boolean(this.state.specializationId && this.state.specializationLevel < SpecializationSystem.maxLevel);
-    const merchantTop = top + (compact ? (hasTraining ? 132 : 48) : (hasTraining ? 185 : 145));
-    createDivider(this, x, merchantTop - 22, width - 52);
-    this.add.text(x, merchantTop, `MERCHANT  ·  ${this.state.gold} GOLD`, fantasyText(12, '#d8ad55', '900')).setOrigin(0.5);
+
+    const blessingHeaderY = top + (compact ? 110 : 180);
+    createDivider(this, x, blessingHeaderY - 13, width - 52);
+    this.add.text(x, blessingHeaderY, 'DIVINE FAVOR', fantasyText(12, '#d8ad55', '900')).setOrigin(0.5);
+    const blessingIndex = this.buttons.length;
+    this.blessingButton = new MenuButton(this, x, top + (compact ? 132 : 213), 'Seek Divine Favor', () => this.chooseBlessing(), () => this.select(blessingIndex),
+      { width: Math.min(430, width - 70), height: compact ? 32 : 54, subtitle: compact ? undefined : 'Choose or rank up one blessing', accent: 0x9b7ede });
+    this.buttons.push(this.blessingButton);
+
+    const merchantTop = top + (compact ? 164 : 268);
+    createDivider(this, x, merchantTop - 13, width - 52);
+    this.add.text(x, merchantTop, `SUPPLY SHOP  ·  ${this.state.gold} GOLD`, fantasyText(12, '#d8ad55', '900')).setOrigin(0.5);
     const columnWidth = Math.min(275, (width - 58) / 2);
     merchantItems.forEach((item, index) => {
       const buttonIndex = this.buttons.length;
@@ -192,24 +204,22 @@ export class TownScene extends Phaser.Scene {
       const column = index % 2;
       const row = Math.floor(index / 2);
       const itemX = x + (column === 0 ? -(columnWidth + 7) / 2 : (columnWidth + 7) / 2);
-      const button = new MenuButton(this, itemX, merchantTop + (compact ? 30 : 43) + row * (compact ? 44 : 64), `${item.displayName}  ·  ${price}g`,
-        () => this.purchase(item.id), () => this.select(buttonIndex), { width: columnWidth, height: compact ? 38 : 54, subtitle: compact ? undefined : item.description, accent: item.color });
+      const button = new MenuButton(this, itemX, merchantTop + (compact ? 20 : 37) + row * (compact ? 32 : 58), `${item.displayName}  ·  ${price}g`,
+        () => this.purchase(item.id), () => this.select(buttonIndex), { width: columnWidth, height: compact ? 28 : 48, subtitle: compact ? undefined : item.description, accent: item.color });
       button.setDisabled(this.state.gold < price || (item.id === 'heal' && this.state.playerStats.currentHp >= this.state.playerStats.maxHp));
       this.buttons.push(button);
     });
-    const actionY = merchantTop + (compact ? 174 : 244);
-    createDivider(this, x, actionY - (compact ? 30 : 38), width - 52);
-    const actionWidth = Math.min(280, (width - 58) / 2);
-    const blessingIndex = this.buttons.length;
-    this.buttons.push(new MenuButton(this, x - actionWidth / 2 - 5, actionY, 'Seek Divine Favor', () => this.chooseBlessing(), () => this.select(blessingIndex),
-      { width: actionWidth, height: compact ? 42 : 58, subtitle: compact ? undefined : 'Choose or rank up a blessing', accent: 0x9b7ede }));
+
+    const continueHeaderY = top + (compact ? 280 : 483);
+    createDivider(this, x, continueHeaderY - 13, width - 52);
+    this.add.text(x, continueHeaderY, 'START NEXT ROUND', fantasyText(12, '#d8ad55', '900')).setOrigin(0.5);
     const continueIndex = this.buttons.length;
     const nextRound = getRoundDefinition(this.state.currentAct, this.state.currentRound + 1);
     const nextObjective = nextRound ? `Face ${nextRound.totalEnemyCount} enemies` : 'Challenge the Act Guardian';
-    this.buttons.push(new MenuButton(this, x + actionWidth / 2 + 5, actionY, 'Venture Onward', () => this.continueRun(), () => this.select(continueIndex),
-      { width: actionWidth, height: compact ? 42 : 58, subtitle: compact ? undefined : nextObjective, accent: 0x4ecdc4 }));
-    this.statusText = this.add.text(x, y + height / 2 - 36, '', {
-      ...fantasyText(13, '#d8ad55', '900'), fixedWidth: width - 52, align: 'center',
+    this.buttons.push(new MenuButton(this, x, top + (compact ? 302 : 520), 'Venture Onward', () => this.continueRun(), () => this.select(continueIndex),
+      { width: Math.min(430, width - 70), height: compact ? 32 : 56, subtitle: compact ? undefined : nextObjective, accent: 0x4ecdc4 }));
+    this.statusText = this.add.text(x, top + (compact ? height - 10 : height - 36), '', {
+      ...fantasyText(compact ? 10 : 13, '#d8ad55', '900'), fixedWidth: width - 52, align: 'center',
     }).setOrigin(0.5);
   }
 
@@ -242,10 +252,13 @@ export class TownScene extends Phaser.Scene {
 
   private continueRun(): void { this.audio.playTownPurchase(); RunStateSystem.prepareNextRound(this.state); this.scene.start('GameScene'); }
   private updateAvailability(): void {
-    const blessingButton = this.buttons[this.buttons.length - 2];
-    blessingButton?.setDisabled(this.state.campRewards.blessing);
+    this.blessingButton?.setDisabled(this.state.campRewards.blessing);
   }
-  private select(index: number): void { this.selectedIndex = Phaser.Math.Wrap(index, 0, this.buttons.length); this.updateSelection(); }
+  private select(index: number): void {
+    this.selectedIndex = Phaser.Math.Wrap(index, 0, this.buttons.length);
+    this.registry.set(TOWN_SELECTION_KEY, this.selectedIndex);
+    this.updateSelection();
+  }
   private previous(): void { this.select(this.selectedIndex - 1); }
   private next(): void { this.select(this.selectedIndex + 1); }
   private updateSelection(): void { this.buttons.forEach((button, index) => button.setSelected(index === this.selectedIndex)); }
