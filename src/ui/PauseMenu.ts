@@ -5,6 +5,9 @@ import { formatStatLines, statSections } from '../game/data/statDisplay';
 import { weaponDefinitions } from '../game/data/weapons';
 import type { RunState } from '../game/types';
 import { MenuButton } from './MenuButton';
+import { PortraitFrame } from '../game/ui/PortraitFrame';
+import { specializationDefinitions } from '../game/data/specializations';
+import { getBlessingRank } from '../game/data/blessingRanks';
 
 export class PauseMenu {
   private container?: Phaser.GameObjects.Container;
@@ -35,8 +38,9 @@ export class PauseMenu {
     const panel = this.scene.add.rectangle(centerX, height / 2, panelWidth, panelHeight, 0x171c23)
       .setStrokeStyle(2, 0x4ecdc4, 0.9);
     const title = this.scene.add.text(centerX, top + 34, 'Paused', this.titleStyle(30)).setOrigin(0.5);
+    const portrait = new PortraitFrame(this.scene, centerX - panelWidth / 2 + 56, top + 62, state.characterId, 68);
     const hero = this.scene.add.text(centerX, top + 76,
-      `${character.displayName}  |  Level ${stats.level}  |  Act ${state.currentAct} Round ${state.currentRound}`, this.textStyle(16, '#ffd166')).setOrigin(0.5);
+      `${character.displayName}  |  Level ${stats.level}  |  Act ${state.currentAct} Round ${state.currentRound}  |  Run ${this.formatTime(state.totalSurvivalTime)}`, this.textStyle(16, '#ffd166')).setOrigin(0.5);
 
     const contentWidth = panelWidth - 64;
     const columnWidth = contentWidth / (narrow ? 2 : 3);
@@ -54,6 +58,7 @@ export class PauseMenu {
     const blessingLines = this.getBlessingLines(state);
     const build = this.createSection(narrow ? left + columnWidth : left, top + 350, narrow ? columnWidth : contentWidth * 0.55, 'Current Build', [
       `Weapon: ${weapon.displayName}  Level ${state.weaponLevel}`,
+      `Specialization: ${state.specializationId ? `${specializationDefinitions[state.specializationId].displayName} ${this.roman(state.specializationLevel)}` : 'None'}`,
       `Passive: ${character.passiveLabel}`,
       ...blessingLines,
     ]);
@@ -65,7 +70,7 @@ export class PauseMenu {
       new MenuButton(this.scene, narrow ? centerX : centerX - 125, buttonY, 'Resume', this.onResume, () => this.select(0)),
       new MenuButton(this.scene, narrow ? centerX : centerX + 125, narrow ? buttonY + 58 : buttonY, 'Main Menu', this.onMainMenu, () => this.select(1)),
     ];
-    this.container = this.scene.add.container(0, 0, [overlay, panel, title, hero, core, combat, utility, build, status, ...this.buttons]).setDepth(110);
+    this.container = this.scene.add.container(0, 0, [overlay, panel, title, portrait, hero, core, combat, utility, build, status, ...this.buttons]).setDepth(110);
     this.selectedIndex = 0;
     this.registerKeyboard();
     this.updateSelection();
@@ -92,11 +97,11 @@ export class PauseMenu {
     if (state.blessings.length === 0) return ['Blessings: None'];
     const gods = ['Jupiter', 'Mars', 'Neptune'] as const;
     return gods.flatMap((god) => {
-      const ids = state.blessings.filter((id) => blessingDefinitions[id].god === god);
+      const ids = [...new Set(state.blessings.filter((id) => blessingDefinitions[id].god === god))];
       if (ids.length === 0) return [];
       const counts = new Map<string, number>();
-      ids.forEach((id) => counts.set(blessingDefinitions[id].displayName, (counts.get(blessingDefinitions[id].displayName) ?? 0) + 1));
-      return [`${god}: ${[...counts].map(([name, count]) => `${name}${count > 1 ? ` x${count}` : ''}`).join(', ')}`];
+      ids.forEach((id) => counts.set(`${blessingDefinitions[id].displayName} ${this.roman(getBlessingRank(state.blessings, id))}`, 1));
+      return [`${god}: ${[...counts.keys()].join(', ')}`];
     });
   }
 
@@ -121,6 +126,10 @@ export class PauseMenu {
   private next(): void { this.select(this.selectedIndex + 1); }
   private updateSelection(): void { this.buttons.forEach((button, index) => button.setSelected(index === this.selectedIndex)); }
   private confirm(): void { this.buttons[this.selectedIndex]?.select(); }
+  private roman(rank: number): string { return ['I', 'II', 'III'][rank - 1] ?? String(rank); }
+  private formatTime(seconds: number): string {
+    return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
+  }
   private textStyle(fontSize: number, color = '#dbe4ee'): Phaser.Types.GameObjects.Text.TextStyle {
     return { color, fontFamily: 'Inter, Arial, sans-serif', fontSize: `${fontSize}px`, fontStyle: '700' };
   }

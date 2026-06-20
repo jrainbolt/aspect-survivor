@@ -26,8 +26,24 @@ export class RunStatsTracker {
     this.state.runStats.levelReached = Math.max(this.state.runStats.levelReached, level);
   }
 
-  recordRoundComplete(): void {
+  recordRoundProgress(target: number, spawned: number, defeated: number): void {
+    this.state.runStats.enemiesTargetThisRound = target;
+    this.state.runStats.enemiesSpawnedThisRound = spawned;
+    this.state.runStats.enemiesDefeatedThisRound = defeated;
+  }
+
+  recordRoundComplete(clearTime: number, clearReward = 0): void {
     this.state.runStats.roundsCompleted += 1;
+    this.state.runStats.roundsCleared += 1;
+    this.state.runStats.roundClearTimes.push(clearTime);
+    if (clearReward > 0) {
+      this.state.runStats.goldEarned += clearReward;
+      this.state.gold += clearReward;
+    }
+  }
+
+  recordVictory(status: 'died' | 'act1_complete'): void {
+    this.state.runStats.victoryStatus = status;
   }
 
   recordAct(act: number): void {

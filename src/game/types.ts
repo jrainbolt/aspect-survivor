@@ -3,6 +3,7 @@ import type { PlayerStats, PlayerStatValues, StatModifier } from '../types/stats
 export type CharacterId = 'amazon' | 'sorcerer' | 'paladin';
 export type WeaponId = 'javelin' | 'arcane-bolt' | 'sword-shield';
 export type BlessingId = 'jupiter-spark' | 'mars-bloodletting' | 'neptune-tidal-push';
+export type SpecializationId = 'crusader' | 'templar' | 'guardian';
 export type RoundType = 'normal' | 'boss';
 export type DamageType = 'physical' | 'lightning' | 'bleed' | 'water' | 'holy' | 'arcane' | 'unknown';
 
@@ -55,11 +56,23 @@ export interface BlessingDefinition {
   color: number;
 }
 
+export interface BlessingRankDefinition {
+  rank: 1 | 2 | 3;
+  effectText: string;
+  chance?: number;
+  bounces?: number;
+  damageMultiplier?: number;
+  durationMs?: number;
+  knockbackBonus?: number;
+  slowMs?: number;
+}
+
 export interface DamageSourceRecord {
   sourceId: string;
   sourceName: string;
   damageType: DamageType;
   amount: number;
+  critical?: boolean;
 }
 
 export type DamageSource = Omit<DamageSourceRecord, 'amount'>;
@@ -75,6 +88,12 @@ export interface RunStatsSnapshot {
   xpCollected: number;
   levelReached: number;
   roundsCompleted: number;
+  roundsCleared: number;
+  roundClearTimes: number[];
+  enemiesTargetThisRound: number;
+  enemiesSpawnedThisRound: number;
+  enemiesDefeatedThisRound: number;
+  victoryStatus?: 'died' | 'act1_complete';
   highestActReached: number;
   blessingsChosen: number;
   damageTaken: number;
@@ -86,14 +105,20 @@ export interface RunState {
   currentAct: number;
   currentRound: number;
   roundType: RoundType;
-  roundTimer: number;
+  roundElapsedTime: number;
+  enemiesTargetThisRound: number;
+  enemiesSpawnedThisRound: number;
+  enemiesDefeatedThisRound: number;
   totalSurvivalTime: number;
   enemiesDefeated: number;
   gold: number;
   playerStats: PlayerStats;
   weaponId: WeaponId;
   weaponLevel: number;
+  specializationId?: SpecializationId;
+  specializationLevel: number;
   blessings: BlessingId[];
+  blessingRerolls: number;
   permanentStatModifiers: StatModifier[];
   temporaryStatModifiers: StatModifier[];
   damageSources: Record<string, DamageSourceRecord>;
@@ -103,6 +128,7 @@ export interface RunState {
     heal: boolean;
     weapon: boolean;
     blessing: boolean;
+    specialization: boolean;
   };
 }
 

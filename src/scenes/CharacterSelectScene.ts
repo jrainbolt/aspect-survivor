@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { characters } from '../game/data/characters';
+import { weaponDefinitions } from '../game/data/weapons';
 import { FullscreenSystem } from '../game/systems/FullscreenSystem';
 import { RunStateSystem } from '../game/systems/RunStateSystem';
-import { PaladinVisual } from '../game/visuals/PaladinVisual';
+import { FantasyTheme, fantasyText } from '../game/ui/FantasyTheme';
+import { PortraitFrame } from '../game/ui/PortraitFrame';
 
 export class CharacterSelectScene extends Phaser.Scene {
   private cards: Phaser.GameObjects.Rectangle[] = [];
@@ -17,42 +19,42 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.selectedIndex = 0;
     FullscreenSystem.install(this);
     const { width, height } = this.scale;
-    this.add.rectangle(0, 0, width, height, 0x111418).setOrigin(0);
-    this.add.text(width / 2, 54, 'Choose Your Hero', {
-      color: '#ffffff', fontFamily: 'Inter, Arial, sans-serif', fontSize: '34px', fontStyle: '900',
-    }).setOrigin(0.5);
+    this.add.rectangle(0, 0, width, height, FantasyTheme.background).setOrigin(0);
+    this.add.text(width / 2, 42, 'CHOOSE YOUR CHAMPION', fantasyText(30, '#f5ead3', '900')).setOrigin(0.5);
+    this.add.text(width / 2, 74, 'Each path begins with a different strength', fantasyText(14, FantasyTheme.muted)).setOrigin(0.5);
 
     const narrow = width < 760;
     const spacing = Math.min(250, width * 0.29);
     characters.forEach((character, index) => {
       const x = narrow ? width / 2 : width / 2 + (index - 1) * spacing;
-      const y = narrow ? 160 + index * 195 : height / 2;
-      const cardWidth = narrow ? Math.min(520, width - 32) : Math.min(220, width * 0.27);
-      const cardHeight = narrow ? 174 : 310;
-      const card = this.add.rectangle(x, y, cardWidth, cardHeight, 0x202630)
+      const y = narrow ? 180 + index * 220 : height / 2 + 18;
+      const cardWidth = narrow ? Math.min(520, width - 24) : Math.min(270, width * 0.29);
+      const cardHeight = narrow ? 204 : Math.min(440, height - 150);
+      const card = this.add.rectangle(x, y, cardWidth, cardHeight, FantasyTheme.panelRaised)
         .setStrokeStyle(2, character.visual.color).setInteractive({ useHandCursor: true });
       this.cards.push(card);
-      const visualX = narrow ? x - cardWidth / 2 + 54 : x;
-      const visualY = narrow ? y : y - 92;
-      if (character.id === 'paladin') {
-        const visual = new PaladinVisual(this, visualX, visualY);
-        visual.setScale(narrow ? 1.15 : 1.35);
-      } else {
-        this.add.circle(visualX, visualY, narrow ? 28 : 34, character.visual.color).setStrokeStyle(5, character.visual.accentColor);
-      }
-      this.add.text(narrow ? x - 18 : x, narrow ? y - 52 : y - 35, character.displayName, {
-        color: '#ffffff', fontFamily: 'Inter, Arial, sans-serif', fontSize: '22px', fontStyle: '900',
-      }).setOrigin(0.5);
-      this.add.text(narrow ? x + 36 : x, narrow ? y + 5 : y + 25, character.description, {
-        color: '#dbe4ee', align: 'center', fixedWidth: narrow ? cardWidth - 130 : Math.min(184, width * 0.23),
-        wordWrap: { width: narrow ? cardWidth - 140 : Math.min(174, width * 0.22), useAdvancedWrap: true },
-        fontFamily: 'Inter, Arial, sans-serif', fontSize: '14px', lineSpacing: 5,
-      }).setOrigin(0.5);
-      this.add.text(narrow ? x + 36 : x, narrow ? y + 62 : y + 105, character.passiveLabel, {
-        color: '#ffd166', align: 'center', fixedWidth: narrow ? cardWidth - 130 : cardWidth - 24,
-        wordWrap: { width: narrow ? cardWidth - 140 : cardWidth - 34, useAdvancedWrap: true },
-        fontFamily: 'Inter, Arial, sans-serif', fontSize: '13px', fontStyle: '800',
-      }).setOrigin(0.5);
+      const portraitX = narrow ? x - cardWidth / 2 + 64 : x;
+      const portraitY = narrow ? y - 35 : y - cardHeight / 2 + 82;
+      new PortraitFrame(this, portraitX, portraitY, character.id, narrow ? 86 : 118);
+      const textX = narrow ? x - cardWidth / 2 + 124 : x;
+      this.add.text(textX, narrow ? y - 76 : y - cardHeight / 2 + 153, character.displayName, fantasyText(23, '#ffffff', '900')).setOrigin(narrow ? 0 : 0.5);
+      this.add.text(textX, narrow ? y - 44 : y - cardHeight / 2 + 190, character.description, {
+        ...fantasyText(13, '#d4cec2'), align: narrow ? 'left' : 'center', fixedWidth: narrow ? cardWidth - 144 : cardWidth - 34,
+        wordWrap: { width: narrow ? cardWidth - 152 : cardWidth - 42, useAdvancedWrap: true }, lineSpacing: 3,
+      }).setOrigin(narrow ? 0 : 0.5, 0);
+      const detailY = narrow ? y + 33 : y + 42;
+      this.add.text(narrow ? x - cardWidth / 2 + 18 : x, detailY, `STARTING WEAPON  ·  ${weaponDefinitions[character.startingWeaponId].displayName}`, {
+        ...fantasyText(12, '#d8ad55', '900'), fixedWidth: cardWidth - 36, align: narrow ? 'left' : 'center',
+      }).setOrigin(narrow ? 0 : 0.5);
+      this.add.text(narrow ? x - cardWidth / 2 + 18 : x, detailY + 28, character.passiveLabel, {
+        ...fantasyText(12, '#f4dfad', '900'), fixedWidth: cardWidth - 36, align: narrow ? 'left' : 'center',
+        wordWrap: { width: cardWidth - 44, useAdvancedWrap: true },
+      }).setOrigin(narrow ? 0 : 0.5);
+      const base = character.baseStats;
+      this.add.text(narrow ? x - cardWidth / 2 + 18 : x, detailY + 62,
+        `HP ${base.maxHp}   DMG ${(base.damage ?? 1).toFixed(1)}x   MOVE ${base.moveSpeed}`, {
+          ...fantasyText(12, FantasyTheme.muted, '900'), fixedWidth: cardWidth - 36, align: narrow ? 'left' : 'center',
+        }).setOrigin(narrow ? 0 : 0.5);
       card.on(Phaser.Input.Events.POINTER_OVER, () => this.select(index));
       card.on(Phaser.Input.Events.POINTER_DOWN, () => this.confirm());
     });
@@ -76,8 +78,8 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   private updateSelection(): void {
     this.cards.forEach((card, index) => {
-      card.setFillStyle(index === this.selectedIndex ? 0x303a46 : 0x202630);
-      card.setStrokeStyle(index === this.selectedIndex ? 5 : 2, index === this.selectedIndex ? 0xffd166 : characters[index].visual.color);
+      card.setFillStyle(index === this.selectedIndex ? 0x303644 : FantasyTheme.panelRaised);
+      card.setStrokeStyle(index === this.selectedIndex ? 5 : 2, index === this.selectedIndex ? FantasyTheme.goldBright : characters[index].visual.color);
     });
   }
 

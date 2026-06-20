@@ -1,6 +1,7 @@
-import { blessingDefinitions } from '../data/blessings';
 import { characterDefinitions } from '../data/characters';
-import { weaponDefinitions } from '../data/weapons';
+import { WEAPON_LEVEL_SIZE_BONUS, weaponDefinitions } from '../data/weapons';
+import { specializationDefinitions } from '../data/specializations';
+import { blessingRanks, getBlessingRank } from '../data/blessingRanks';
 import type { RunState } from '../types';
 import { DEFAULT_PLAYER_STATS, type PlayerStats, type PlayerStatKey, type PlayerStatValues, type StatModifier } from '../../types/stats';
 
@@ -9,6 +10,8 @@ export interface StatCalculationInput {
   weaponId: RunState['weaponId'];
   weaponLevel: number;
   blessings: RunState['blessings'];
+  specializationId?: RunState['specializationId'];
+  specializationLevel?: number;
   permanentModifiers?: StatModifier[];
   temporaryModifiers?: StatModifier[];
   progression?: Pick<PlayerStats, 'currentHp' | 'level' | 'xp' | 'xpToNextLevel'>;
@@ -36,8 +39,9 @@ export class StatSystem {
         id: `weapon:${weapon.id}`,
         source: 'weapon',
         flat: { pierce: weapon.pierce, knockback: weapon.knockback },
-        multiply: { projectileSize: 1 + Math.max(0, input.weaponLevel - 1) * 0.05 },
+        multiply: { projectileSize: 1 + Math.max(0, input.weaponLevel - 1) * WEAPON_LEVEL_SIZE_BONUS },
       },
+      ...(input.specializationId ? [this.getSpecializationModifier(input.specializationId, input.specializationLevel ?? 1)] : []),
       ...this.getBlessingModifiers(input.blessings),
       ...(input.permanentModifiers ?? []),
       ...(input.temporaryModifiers ?? []),
@@ -62,6 +66,8 @@ export class StatSystem {
       weaponId: state.weaponId,
       weaponLevel: state.weaponLevel,
       blessings: state.blessings,
+      specializationId: state.specializationId,
+      specializationLevel: state.specializationLevel,
       permanentModifiers: state.permanentStatModifiers,
       temporaryModifiers: state.temporaryStatModifiers,
       progression: state.playerStats,
@@ -71,11 +77,16 @@ export class StatSystem {
   }
 
   private static getBlessingModifiers(blessings: RunState['blessings']): StatModifier[] {
-    return blessings.flatMap((id, index) => {
-      const blessing = blessingDefinitions[id];
-      if (blessing.effect !== 'knockback') return [];
-      return [{ id: `blessing:${id}:${index}`, source: 'blessing' as const, flat: { knockback: 105 } }];
-    });
+    const rank = getBlessingRank(blessings, 'neptune-tidal-push');
+    if (rank === 0) return [];
+    const knockback = blessingRanks['neptune-tidal-push'][rank - 1].knockbackBonus ?? 0;
+    return [{ id: 'blessing:neptune-tidal-push', source: 'blessing', flat: { knockback } }];
+  }
+
+  private static getSpecializationModifier(id: NonNullable<RunState['specializationId']>, level: number): StatModifier {
+    const base = specializationDefinitions[id].statModifier;
+    const flat = Object.fromEntries(Object.entries(base.flat ?? {}).map(([key, value]) => [key, value * Math.max(1, level)])) as StatModifier['flat'];
+    return { ...base, flat };
   }
 
   private static applyModifier(values: PlayerStatValues, modifier: StatModifier): void {

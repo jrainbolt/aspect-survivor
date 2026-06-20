@@ -9,21 +9,24 @@ import { BlessingSystem } from '../game/systems/BlessingSystem';
 import { DamageTracker } from '../game/systems/DamageTracker';
 import { EffectsSystem } from '../game/systems/EffectsSystem';
 import { FullscreenSystem } from '../game/systems/FullscreenSystem';
-import { NORMAL_ROUND_SECONDS, RunStateSystem } from '../game/systems/RunStateSystem';
+import { RunStateSystem } from '../game/systems/RunStateSystem';
 import { RunStatsTracker } from '../game/systems/RunStatsTracker';
 import { MeleeAttackSystem } from '../game/systems/MeleeAttackSystem';
 import { StatSystem } from '../game/systems/StatSystem';
+import { CombatTextSystem } from '../game/systems/CombatTextSystem';
 import { WeaponSystem } from '../game/systems/WeaponSystem';
 import type { DamageSource, RunState } from '../game/types';
 import { EnemySpawner } from '../managers/EnemySpawner';
+import { RoundManager } from '../managers/RoundManager';
 import { UpgradeManager } from '../managers/UpgradeManager';
-import { WaveManager } from '../managers/WaveManager';
 import { XpManager } from '../managers/XpManager';
 import { GameEvents } from '../types/events';
 import { ArenaBorder } from '../ui/ArenaBorder';
 import { Hud } from '../ui/Hud';
 import { PauseMenu } from '../ui/PauseMenu';
 import { UpgradePanel } from '../ui/UpgradePanel';
+import { PlaceholderTextureFactory } from '../game/visuals/PlaceholderTextureFactory';
+import { BossSystem } from '../game/systems/BossSystem';
 
 const SHIELD_GUARD_MODIFIER_ID = 'Shield Bash Guard: +15 Armor';
 
@@ -38,9 +41,12 @@ export class GameScene extends Phaser.Scene {
   private meleeAttackSystem?: MeleeAttackSystem;
   private blessingSystem!: BlessingSystem;
   private effects!: EffectsSystem;
+  private combatText!: CombatTextSystem;
   private audio = new AudioSystem();
   private damageTracker!: DamageTracker;
   private runStatsTracker!: RunStatsTracker;
+  private roundManager!: RoundManager;
+  private bossSystem!: BossSystem;
   private xpManager!: XpManager;
   private upgradeManager!: UpgradeManager;
   private arenaBorder!: ArenaBorder;
@@ -62,6 +68,7 @@ export class GameScene extends Phaser.Scene {
     this.createCircleTexture('projectile', 6, 0xffffff);
     this.createCircleTexture('xp-orb', 8, 0x118ab2);
     this.createGridTexture();
+    PlaceholderTextureFactory.create(this);
   }
 
   create(): void {
@@ -73,23 +80,32 @@ export class GameScene extends Phaser.Scene {
     this.configureBounds(this.scale.width, this.scale.height);
     this.arenaBackground = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'arena-grid').setOrigin(0).setDepth(0);
 
-    this.player = new Player(this, this.scale.width / 2, this.scale.height / 2, character, this.state.playerStats);
+    this.player = new Player(this, this.scale.width / 2, this.scale.height / 2, character, this.state.playerStats, this.state.specializationId);
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, runChildUpdate: false });
     this.xpOrbs = this.physics.add.group({ classType: XpOrb, runChildUpdate: false });
     this.upgradeManager = new UpgradeManager();
     this.xpManager = new XpManager(this, this.player, this.upgradeManager);
-    this.enemySpawner = new EnemySpawner(this, this.enemies, new WaveManager());
+    this.enemySpawner = new EnemySpawner(this, this.enemies);
     this.effects = new EffectsSystem(this);
+    this.combatText = new CombatTextSystem(this);
     this.damageTracker = new DamageTracker(this.state);
     this.runStatsTracker = new RunStatsTracker(this.state);
-    this.blessingSystem = new BlessingSystem(() => this.state.blessings);
+    this.roundManager = new RoundManager(this.state, this.runStatsTracker);
+    this.bossSystem = new BossSystem(this, {
+      damagePlayer: (amount) => this.damagePlayer(amount),
+      summon: (kind, x, y) => this.enemySpawner.spawnAt(kind, x, y),
+      playAttack: () => this.audio.playBossAttack(),
+      canResolveAttack: () => !this.isChoosingUpgrade && !this.isPaused && !this.roundEnding,
+    });
+    this.blessingSystem = new BlessingSystem(this, () => this.state.blessings);
     if (this.state.weaponId === 'sword-shield') {
-      this.meleeAttackSystem = new MeleeAttackSystem(this, () => this.state.weaponLevel, {
+      this.meleeAttackSystem = new MeleeAttackSystem(this, () => this.state.weaponLevel, () => this.state.specializationId, () => this.state.specializationLevel, {
         dealDamage: (enemy, amount, source) => this.handleMeleeHit(enemy, amount, source),
         onShieldGuard: () => this.activateShieldGuard(),
         onSwordSwing: () => this.audio.playMeleeSwing(),
         onShieldBash: () => this.audio.playShieldBash(),
+        onImpact: (enemy, heavy) => this.effects.meleeImpact(enemy, heavy),
       });
     } else {
       this.weaponSystem = new WeaponSystem(this.state.weaponId, () => this.state.weaponLevel, () => {
@@ -122,31 +138,31 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
-    this.hud.update(this.state, this.boss);
+    this.hud.update(this.state, this.boss, this.enemies.countActive(true), this.bossSystem.getPhaseLabel());
     if (this.player.stats.currentHp <= 0 || this.isChoosingUpgrade || this.isPaused || this.roundEnding) return;
 
     const deltaSeconds = delta / 1000;
     this.runStatsTracker.addSurvival(deltaSeconds);
-    if (this.state.roundType === 'normal') {
-      this.state.roundTimer = Math.max(0, this.state.roundTimer - deltaSeconds);
-      if (this.state.roundTimer <= 0) {
-        this.completeNormalRound();
-        return;
-      }
-    }
-
-    const elapsed = this.state.roundType === 'normal'
-      ? NORMAL_ROUND_SECONDS - this.state.roundTimer + (this.state.currentRound - 1) * NORMAL_ROUND_SECONDS
-      : 0;
+    this.roundManager.updateElapsed(deltaSeconds);
     this.runStatsTracker.recordHealing(this.player.update(time, delta));
-    this.enemySpawner.update(time, elapsed, this.state.roundType);
+    const spawned = this.enemySpawner.update(
+      time,
+      this.state.roundType,
+      this.roundManager.definition,
+      this.state.enemiesSpawnedThisRound,
+    );
+    this.roundManager.recordSpawned(spawned);
     this.captureBoss();
+    this.bossSystem.update(time, this.boss, this.player);
     this.weaponSystem?.update(time, this.player, this.enemies, this.projectiles);
     this.meleeAttackSystem?.update(time, this.player, this.enemies);
     this.blessingSystem.update(time, (enemy, amount, source) => this.damageEnemy(enemy, amount, source, false));
     this.updateEnemies();
     this.updateProjectiles(time);
     this.updateOrbs();
+    if (this.state.roundType === 'normal' && this.roundManager.isCleared(this.enemies.countActive(true))) {
+      this.completeNormalRound();
+    }
   }
 
   private registerCollisions(): void {
@@ -156,19 +172,14 @@ export class GameScene extends Phaser.Scene {
       if (!projectile.registerHit(enemy.combatId)) return;
       enemy.applyKnockback(new Phaser.Math.Vector2(this.player.x, this.player.y), projectile.knockback);
       this.blessingSystem.onHit(this.time.now, enemy, projectile.damage, this.enemies,
+        new Phaser.Math.Vector2(this.player.x, this.player.y),
         (target, amount, source) => this.damageEnemy(target, amount, source, false));
       this.damageEnemy(enemy, projectile.damage, projectile.source, true);
     });
 
     this.physics.add.overlap(this.player, this.enemies, (_playerObject, enemyObject) => {
       const enemy = enemyObject as Enemy;
-      const damageTaken = this.player.takeDamage(enemy.stats.damage, this.time.now);
-      if (damageTaken > 0) {
-        this.runStatsTracker.recordDamageTaken(damageTaken);
-        this.audio.playPlayerHurt();
-        this.events.emit(GameEvents.StatsChanged);
-      }
-      if (this.player.stats.currentHp <= 0) this.endGame();
+      this.damagePlayer(enemy.stats.damage);
     });
 
     this.physics.add.overlap(this.player, this.xpOrbs, (_playerObject, orbObject) => {
@@ -197,6 +208,7 @@ export class GameScene extends Phaser.Scene {
     this.isChoosingUpgrade = true;
     this.physics.pause();
     this.effects.levelUp(this.player.x, this.player.y);
+    this.player.playLevelUpCelebration();
     this.audio.playLevelUp();
     this.upgradePanel.show(choices);
   }
@@ -212,12 +224,13 @@ export class GameScene extends Phaser.Scene {
     const actualDamage = Math.min(enemy.stats.hp, amount);
     this.damageTracker.record({ ...source, amount: actualDamage });
     if (allowEffects) this.audio.playHit();
-    this.effects.showDamage(enemy, Math.round(actualDamage), allowEffects ? '#ffffff' : '#ff9f8f');
+    this.combatText.enemyDamage(enemy, actualDamage, source.damageType, source.critical);
     if (enemy.takeDamage(amount)) this.killEnemy(enemy);
   }
 
   private handleMeleeHit(enemy: Enemy, amount: number, source: DamageSource): void {
     this.blessingSystem.onHit(this.time.now, enemy, amount, this.enemies,
+      new Phaser.Math.Vector2(this.player.x, this.player.y),
       (target, blessingDamage, blessingSource) => this.damageEnemy(target, blessingDamage, blessingSource, false));
     this.damageEnemy(enemy, amount, source, true);
   }
@@ -248,7 +261,9 @@ export class GameScene extends Phaser.Scene {
     const baseGold = kind === 'boss' ? 50 : kind === 'brute' ? 3 : 1;
     const gold = Math.max(1, Math.round(baseGold * this.player.stats.goldGain));
     this.runStatsTracker.recordKill(kind, gold);
+    if (kind !== 'boss') this.roundManager.recordDefeated();
     this.effects.enemyDeath(x, y, enemy.visualColor);
+    this.audio.playEnemyDeath();
     this.xpOrbs.add(new XpOrb(this, x, y, xpValue));
     enemy.destroy();
     if (kind === 'boss') this.completeBossRound();
@@ -280,28 +295,56 @@ export class GameScene extends Phaser.Scene {
   }
 
   private completeNormalRound(): void {
+    if (this.roundEnding) return;
     this.roundEnding = true;
-    this.runStatsTracker.recordRoundComplete();
-    this.state.campRewards = { heal: false, weapon: false, blessing: false };
+    const clearReward = this.roundManager.definition?.clearReward ?? 0;
+    this.runStatsTracker.recordRoundComplete(this.state.roundElapsedTime, clearReward);
+    this.state.campRewards = { heal: false, weapon: false, blessing: false, specialization: false };
     this.physics.pause();
-    this.time.delayedCall(350, () => this.scene.start('TownScene'));
+    const message = this.add.text(this.scale.width / 2, this.scale.height / 2, `ROUND CLEARED!\n+${clearReward} GOLD`, {
+      color: '#ffd166', fontFamily: 'Inter, Arial, sans-serif', fontSize: '32px', fontStyle: '900', align: 'center',
+      stroke: '#111418', strokeThickness: 7,
+    }).setOrigin(0.5).setDepth(120);
+    this.tweens.add({ targets: message, scale: { from: 0.85, to: 1 }, alpha: { from: 0, to: 1 }, duration: 220 });
+    this.time.delayedCall(1100, () => this.scene.start('TownScene'));
   }
 
   private completeBossRound(): void {
     if (this.roundEnding) return;
     this.roundEnding = true;
-    this.runStatsTracker.recordRoundComplete();
+    this.runStatsTracker.recordRoundComplete(this.state.roundElapsedTime);
     this.runStatsTracker.recordAct(this.state.currentAct);
+    this.runStatsTracker.recordVictory('act1_complete');
     this.state.result = 'act-complete';
     this.physics.pause();
-    this.time.delayedCall(700, () => this.scene.start('BlessingScene', { returnScene: 'RunSummaryScene', major: true }));
+    this.audio.playVictory();
+    this.effects.actVictory(this.player.x, this.player.y);
+    const message = this.add.text(this.scale.width / 2, this.scale.height / 2, 'ACT 1 COMPLETE', {
+      color: '#ffd166', fontFamily: 'Inter, Arial, sans-serif', fontSize: '38px', fontStyle: '900', align: 'center',
+      stroke: '#111418', strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(120);
+    this.tweens.add({ targets: message, scale: { from: 0.82, to: 1 }, alpha: { from: 0, to: 1 }, duration: 260 });
+    this.time.delayedCall(1400, () => this.scene.start('RunSummaryScene'));
   }
 
   private endGame(): void {
+    if (this.roundEnding) return;
     this.roundEnding = true;
     this.state.result = 'defeat';
+    this.runStatsTracker.recordVictory('died');
     this.physics.pause();
     this.time.delayedCall(350, () => this.scene.start('RunSummaryScene'));
+  }
+
+  private damagePlayer(amount: number): void {
+    const damageTaken = this.player.takeDamage(amount, this.time.now);
+    if (damageTaken > 0) {
+      this.combatText.playerDamage(this.player, damageTaken);
+      this.runStatsTracker.recordDamageTaken(damageTaken);
+      this.audio.playPlayerHurt();
+      this.events.emit(GameEvents.StatsChanged);
+    }
+    if (this.player.stats.currentHp <= 0) this.endGame();
   }
 
   private togglePause(): void {

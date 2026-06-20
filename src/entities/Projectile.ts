@@ -14,6 +14,7 @@ interface ProjectileFireConfig {
   scale: number;
   sourceName: string;
   damageType: DamageType;
+  critical: boolean;
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Image {
@@ -37,7 +38,7 @@ export class Projectile extends Phaser.Physics.Arcade.Image {
     this.damage = config.damage;
     this.weaponId = config.weaponId;
     this.knockback = config.knockback;
-    this.source = { sourceId: config.weaponId, sourceName: config.sourceName, damageType: config.damageType };
+    this.source = { sourceId: config.weaponId, sourceName: config.sourceName, damageType: config.damageType, critical: config.critical };
     this.pierceRemaining = config.pierce;
     this.hitEnemyIds.clear();
     this.setTint(config.color).setScale(config.scale);

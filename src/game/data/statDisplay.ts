@@ -13,6 +13,7 @@ const multiplier = (value: number): string => `${value.toFixed(2)}x`;
 export const statSections: Record<'core' | 'combat' | 'utility', StatDisplayDefinition[]> = {
   core: [
     { key: 'damage', label: 'Damage', format: multiplier },
+    { key: 'flatDamage', label: 'Flat Damage', format: number },
     { key: 'attackSpeed', label: 'Attack Speed', format: multiplier },
     { key: 'moveSpeed', label: 'Move Speed', format: number },
     { key: 'armor', label: 'Armor', format: number },

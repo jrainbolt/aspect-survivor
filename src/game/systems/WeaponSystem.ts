@@ -1,7 +1,7 @@
 import type { Enemy } from '../../entities/Enemy';
 import type { Player } from '../../entities/Player';
 import { Projectile } from '../../entities/Projectile';
-import { weaponDefinitions } from '../data/weapons';
+import { getWeaponLevelDamageMultiplier, weaponDefinitions } from '../data/weapons';
 import type { WeaponId } from '../types';
 
 export interface WeaponFireEvent {
@@ -24,11 +24,13 @@ export class WeaponSystem {
     if (!target) return;
 
     const definition = weaponDefinitions[this.weaponId];
-    const direction = new Phaser.Math.Vector2(target.x - player.x, target.y - player.y).normalize();
+    const direction = new Phaser.Math.Vector2(target.x - player.x, target.y - player.y);
+    if (direction.lengthSq() < 1) direction.copy(player.getFacingDirection());
+    else direction.normalize();
     player.setFacing(direction);
-    const levelMultiplier = 1 + (this.getWeaponLevel() - 1) * 0.22;
+    const levelMultiplier = getWeaponLevelDamageMultiplier(this.getWeaponLevel());
     const typeMultiplier = definition.damageType === 'arcane' ? player.stats.spellDamageMultiplier : 1;
-    const baseDamage = definition.baseDamage * player.stats.damage * levelMultiplier * typeMultiplier;
+    const baseDamage = (definition.baseDamage * player.stats.damage + player.stats.flatDamage) * levelMultiplier * typeMultiplier;
     const count = player.stats.projectileCount;
     for (let index = 0; index < count; index += 1) {
       const spread = count === 1 ? 0 : Phaser.Math.DegToRad((index - (count - 1) / 2) * 9);
@@ -50,6 +52,7 @@ export class WeaponSystem {
         scale: definition.projectileScale * player.stats.projectileSize,
         sourceName: definition.displayName,
         damageType: definition.damageType,
+        critical,
       });
     }
 

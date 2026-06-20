@@ -6,6 +6,8 @@ import { RunStateSystem } from '../game/systems/RunStateSystem';
 import { SaveSystem } from '../game/systems/SaveSystem';
 import type { RunState } from '../game/types';
 import { MenuButton } from '../ui/MenuButton';
+import { PortraitFrame } from '../game/ui/PortraitFrame';
+import { specializationDefinitions } from '../game/data/specializations';
 
 export class RunSummaryScene extends Phaser.Scene {
   private buttons: MenuButton[] = [];
@@ -28,12 +30,27 @@ export class RunSummaryScene extends Phaser.Scene {
     const narrow = width < 760;
 
     this.add.rectangle(0, 0, width, height, 0x111418).setOrigin(0);
+    if (this.state.result === 'act-complete') {
+      this.add.rectangle(centerX, 49, Math.min(560, width - 30), 76, 0x352d1b, 0.6).setStrokeStyle(2, 0xd8ad55, 0.8);
+      this.add.line(0, 0, centerX - 280, 49, centerX - 105, 49, 0xd8ad55, 0.8).setOrigin(0);
+      this.add.line(0, 0, centerX + 105, 49, centerX + 280, 49, 0xd8ad55, 0.8).setOrigin(0);
+    }
     this.add.text(centerX, 44, this.state.result === 'act-complete' ? 'Act 1 Complete' : 'Run Summary', {
       color: '#ffffff', fontFamily: 'Inter, Arial, sans-serif', fontSize: '34px', fontStyle: '900',
     }).setOrigin(0.5);
+    if (this.state.result === 'act-complete') {
+      this.add.text(centerX, 69, 'THE ACT GUARDIAN HAS FALLEN', {
+        color: '#d8ad55', fontFamily: 'Inter, Arial, sans-serif', fontSize: '11px', fontStyle: '800',
+      }).setOrigin(0.5);
+    }
     this.add.text(centerX, 84, hero.displayName, {
       color: '#ffd166', fontFamily: 'Inter, Arial, sans-serif', fontSize: '18px', fontStyle: '900',
     }).setOrigin(0.5);
+    this.add.text(centerX, 108, this.state.specializationId
+      ? `${specializationDefinitions[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'No Specialization', {
+      color: '#9aa6b2', fontFamily: 'Inter, Arial, sans-serif', fontSize: '13px', fontStyle: '800',
+    }).setOrigin(0.5);
+    new PortraitFrame(this, narrow ? 66 : centerX - 250, 78, this.state.characterId, 78);
 
     const leftX = narrow ? 16 : centerX - Math.min(330, width * 0.27);
     const rightX = narrow ? centerX + 8 : centerX + Math.min(120, width * 0.1);
@@ -41,11 +58,13 @@ export class RunSummaryScene extends Phaser.Scene {
     this.add.text(leftX, 130, 'Run Statistics', this.headingStyle()).setOrigin(0, 0);
     this.add.text(leftX, 166, [
       `Time Survived: ${this.formatTime(stats.totalSurvivalTime)}`,
+      `Outcome: ${stats.victoryStatus === 'act1_complete' ? 'Act 1 Victory' : 'Fallen'}`,
       `Level Reached: ${stats.levelReached}`,
       `Enemies Defeated: ${stats.enemiesDefeated}`,
       `Bosses Defeated: ${stats.bossesDefeated}`,
       `Gold Earned: ${stats.goldEarned}`,
-      `Rounds Completed: ${stats.roundsCompleted}`,
+      `Rounds Cleared: ${stats.roundsCleared}`,
+      `Clear Times: ${stats.roundClearTimes.map((time) => this.formatTime(time)).join(' / ') || 'None'}`,
       `Highest Act: ${stats.highestActReached}`,
       `Damage Taken: ${Math.round(stats.damageTaken)}`,
       `Healing Received: ${Math.round(stats.healingReceived)}`,
@@ -101,6 +120,7 @@ export class RunSummaryScene extends Phaser.Scene {
     const minutes = Math.floor(seconds / 60);
     return `${minutes}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
   }
+  private roman(rank: number): string { return ['I', 'II', 'III'][rank - 1] ?? String(rank); }
   private headingStyle(): Phaser.Types.GameObjects.Text.TextStyle {
     return { color: '#ffffff', fontFamily: 'Inter, Arial, sans-serif', fontSize: '18px', fontStyle: '900' };
   }

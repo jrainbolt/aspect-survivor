@@ -1,5 +1,9 @@
 import type { WeaponDefinition, WeaponId } from '../types';
 
+export const WEAPON_LEVEL_DAMAGE_BONUS = 0.22;
+export const WEAPON_LEVEL_SIZE_BONUS = 0.05;
+export const getWeaponLevelDamageMultiplier = (level: number): number => 1 + Math.max(0, level - 1) * WEAPON_LEVEL_DAMAGE_BONUS;
+
 export const weaponDefinitions: Record<WeaponId, WeaponDefinition> = {
   javelin: {
     id: 'javelin', displayName: 'Javelin', damageType: 'physical', baseDamage: 18,
@@ -18,7 +22,7 @@ export const weaponDefinitions: Record<WeaponId, WeaponDefinition> = {
   },
 };
 
-export type MeleeAttackShape = 'arc' | 'bash';
+export type MeleeAttackShape = 'arc' | 'bash' | 'thrust';
 
 export interface MeleeAttackDefinition {
   id: 'paladin-sword-hack' | 'paladin-shield-bash';

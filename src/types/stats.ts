@@ -1,6 +1,7 @@
 export interface PlayerStatValues {
   maxHp: number;
   damage: number;
+  flatDamage: number;
   attackSpeed: number;
   moveSpeed: number;
   armor: number;
@@ -48,6 +49,7 @@ export interface EnemyStats {
 export const DEFAULT_PLAYER_STATS: PlayerStatValues = {
   maxHp: 100,
   damage: 1,
+  flatDamage: 0,
   attackSpeed: 1,
   moveSpeed: 220,
   armor: 0,

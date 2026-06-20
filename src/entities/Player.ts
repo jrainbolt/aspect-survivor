@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import type { CharacterDefinition } from '../game/types';
+import type { CharacterDefinition, SpecializationId } from '../game/types';
 import type { PlayerStats } from '../types/stats';
-import { PaladinVisual } from '../game/visuals/PaladinVisual';
+import { PaladinAnimator } from '../game/entities/PaladinAnimator';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public readonly stats: PlayerStats;
@@ -9,10 +9,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly keys: Record<'up' | 'down' | 'left' | 'right', Phaser.Input.Keyboard.Key[]>;
   private invulnerableUntil = 0;
   private readonly facingDirection = new Phaser.Math.Vector2(1, 0);
-  private readonly paladinVisual?: PaladinVisual;
+  private readonly paladinAnimator?: PaladinAnimator;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, character: CharacterDefinition, stats: PlayerStats) {
-    super(scene, x, y, 'player');
+  constructor(scene: Phaser.Scene, x: number, y: number, character: CharacterDefinition, stats: PlayerStats, specializationId?: SpecializationId) {
+    super(scene, x, y, character.id === 'paladin' ? 'player' : `hero-${character.id}`);
     this.stats = stats;
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -20,10 +20,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setCollideWorldBounds(true);
     this.setDepth(10);
     this.setCircle(16, 8, 8);
-    this.setTint(character.visual.color);
     if (character.id === 'paladin') {
       this.setVisible(false);
-      this.paladinVisual = new PaladinVisual(scene, x, y);
+      this.paladinAnimator = new PaladinAnimator(scene, x, y, specializationId);
     }
 
     const keyboard = scene.input.keyboard;
@@ -61,8 +60,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(direction.x * this.stats.moveSpeed, direction.y * this.stats.moveSpeed);
     const alpha = time < this.invulnerableUntil ? 0.55 : 1;
     this.setAlpha(alpha);
-    this.paladinVisual?.setPosition(this.x, this.y);
-    this.paladinVisual?.setAlpha(alpha);
+    this.paladinAnimator?.update(this.x, this.y, alpha, direction.lengthSq() > 0, time);
     const healing = Math.min(this.stats.maxHp - this.stats.currentHp, this.stats.hpRegen * delta / 1000);
     this.stats.currentHp += healing;
     return healing;
@@ -79,6 +77,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const damageTaken = Math.min(this.stats.currentHp, mitigated);
     this.stats.currentHp = Math.max(0, this.stats.currentHp - damageTaken);
     this.invulnerableUntil = time + 450;
+    this.paladinAnimator?.hurt(time);
     return damageTaken;
   }
 
@@ -97,11 +96,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const step = Math.PI / 4;
     const angle = Math.round(direction.angle() / step) * step;
     this.facingDirection.setToPolar(angle, 1);
-    this.paladinVisual?.setFacing(this.facingDirection);
+    this.paladinAnimator?.setFacing(this.facingDirection);
+    if (!this.paladinAnimator) this.setRotation(angle);
   }
 
   getFacingDirection(): Phaser.Math.Vector2 { return this.facingDirection.clone(); }
-  playSwordHack(): void { this.paladinVisual?.playSwordHack(); }
-  playShieldBash(): void { this.paladinVisual?.playShieldBash(); }
-  playGuardFlash(): void { this.paladinVisual?.playGuardFlash(); }
+  playSwordHack(): void { this.paladinAnimator?.swordAttack(this.scene.time.now); }
+  playPikeThrust(): void { this.paladinAnimator?.pikeThrust(this.scene.time.now); }
+  playShieldBash(): void { this.paladinAnimator?.shieldBash(this.scene.time.now); }
+  playGuardFlash(): void { this.paladinAnimator?.guardFlash(); }
+  playLevelUpCelebration(): void { this.paladinAnimator?.celebrate(this.scene.time.now); }
 }

@@ -1,13 +1,14 @@
 import { characterDefinitions } from '../data/characters';
+import { getRoundDefinition } from '../data/rounds';
 import type { CharacterId, RunState, RunStatsSnapshot } from '../types';
 import { StatSystem } from './StatSystem';
 
 export const RUN_STATE_KEY = 'active-run';
-export const NORMAL_ROUND_SECONDS = 60;
-
 const createRunStats = (): RunStatsSnapshot => ({
   runStartTime: Date.now(), totalSurvivalTime: 0, enemiesDefeated: 0, elitesDefeated: 0,
   bossesDefeated: 0, goldEarned: 0, xpCollected: 0, levelReached: 1, roundsCompleted: 0,
+  roundsCleared: 0, roundClearTimes: [], enemiesTargetThisRound: getRoundDefinition(1, 1)?.totalEnemyCount ?? 0,
+  enemiesSpawnedThisRound: 0, enemiesDefeatedThisRound: 0,
   highestActReached: 1, blessingsChosen: 0, damageTaken: 0, healingReceived: 0,
 });
 
@@ -20,19 +21,25 @@ export class RunStateSystem {
       currentAct: 1,
       currentRound: 1,
       roundType: 'normal',
-      roundTimer: NORMAL_ROUND_SECONDS,
+      roundElapsedTime: 0,
+      enemiesTargetThisRound: getRoundDefinition(1, 1)?.totalEnemyCount ?? 0,
+      enemiesSpawnedThisRound: 0,
+      enemiesDefeatedThisRound: 0,
       totalSurvivalTime: 0,
       enemiesDefeated: 0,
       gold: 0,
       playerStats,
       weaponId: character.startingWeaponId,
       weaponLevel: 1,
+      specializationId: undefined,
+      specializationLevel: 0,
       blessings: [],
+      blessingRerolls: 0,
       permanentStatModifiers: [],
       temporaryStatModifiers: [],
       damageSources: {},
       runStats: createRunStats(),
-      campRewards: { heal: false, weapon: false, blessing: false },
+      campRewards: { heal: false, weapon: false, blessing: false, specialization: false },
     };
   }
 
@@ -48,23 +55,26 @@ export class RunStateSystem {
   }
 
   static prepareNextRound(state: RunState): void {
-    state.campRewards = { heal: false, weapon: false, blessing: false };
+    state.campRewards = { heal: false, weapon: false, blessing: false, specialization: false };
     if (state.currentRound < 3) {
       state.currentRound += 1;
       state.roundType = 'normal';
-      state.roundTimer = NORMAL_ROUND_SECONDS;
+      this.resetRoundProgress(state);
       return;
     }
     state.currentRound = 4;
     state.roundType = 'boss';
-    state.roundTimer = 0;
+    this.resetRoundProgress(state);
   }
 
   private static migrate(state: RunState): void {
     if ((state.weaponId as string) === 'holy-hammer') state.weaponId = 'sword-shield';
     const legacyStats = state.playerStats as unknown as { hp?: number; currentHp?: number };
     legacyStats.currentHp ??= legacyStats.hp ?? state.playerStats.maxHp;
-    state.campRewards ??= { heal: false, weapon: false, blessing: false };
+    state.campRewards ??= { heal: false, weapon: false, blessing: false, specialization: false };
+    state.campRewards.specialization ??= false;
+    state.specializationLevel ??= state.specializationId ? 1 : 0;
+    state.blessingRerolls ??= 0;
     state.permanentStatModifiers ??= [];
     state.temporaryStatModifiers ??= [];
     state.damageSources ??= {};
@@ -78,6 +88,28 @@ export class RunStateSystem {
       highestActReached: state.currentAct,
       blessingsChosen: state.blessings.length,
     };
+    state.roundElapsedTime ??= 0;
+    const definition = getRoundDefinition(state.currentAct, state.currentRound);
+    state.enemiesTargetThisRound ??= state.roundType === 'normal' ? definition?.totalEnemyCount ?? 0 : 0;
+    state.enemiesSpawnedThisRound ??= 0;
+    state.enemiesDefeatedThisRound ??= 0;
+    state.runStats.roundsCleared ??= state.runStats.roundsCompleted;
+    state.runStats.roundClearTimes ??= [];
+    state.runStats.enemiesTargetThisRound ??= state.enemiesTargetThisRound;
+    state.runStats.enemiesSpawnedThisRound ??= state.enemiesSpawnedThisRound;
+    state.runStats.enemiesDefeatedThisRound ??= state.enemiesDefeatedThisRound;
+    state.runStats.victoryStatus ??= state.result === 'act-complete' ? 'act1_complete' : state.result === 'defeat' ? 'died' : undefined;
     StatSystem.syncRunState(state);
+  }
+
+  private static resetRoundProgress(state: RunState): void {
+    const definition = getRoundDefinition(state.currentAct, state.currentRound);
+    state.roundElapsedTime = 0;
+    state.enemiesTargetThisRound = state.roundType === 'normal' ? definition?.totalEnemyCount ?? 0 : 0;
+    state.enemiesSpawnedThisRound = 0;
+    state.enemiesDefeatedThisRound = 0;
+    state.runStats.enemiesTargetThisRound = state.enemiesTargetThisRound;
+    state.runStats.enemiesSpawnedThisRound = 0;
+    state.runStats.enemiesDefeatedThisRound = 0;
   }
 }

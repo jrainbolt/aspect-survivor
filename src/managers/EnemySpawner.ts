@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy, type EnemyConfig, type EnemyKind } from '../entities/Enemy';
 import type { RoundType } from '../game/types';
-import type { WaveManager } from './WaveManager';
+import type { RoundDefinition } from '../game/data/rounds';
 
 const enemyConfigs: Record<EnemyKind, EnemyConfig> = {
   grunt: {
@@ -25,8 +25,8 @@ const enemyConfigs: Record<EnemyKind, EnemyConfig> = {
   boss: {
     kind: 'boss',
     tint: 0x9b5de5,
-    scale: 2.35,
-    stats: { maxHp: 450, hp: 450, damage: 30, speed: 58, xpValue: 85 },
+    scale: 2.7,
+    stats: { maxHp: 5000, hp: 5000, damage: 38, speed: 55, xpValue: 150 },
   },
 };
 
@@ -37,36 +37,50 @@ export class EnemySpawner {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly enemies: Phaser.Physics.Arcade.Group,
-    private readonly waveManager: WaveManager,
   ) {}
 
-  update(time: number, elapsedSeconds: number, roundType: RoundType): void {
+  update(time: number, roundType: RoundType, definition?: RoundDefinition, alreadySpawned = 0): number {
     if (roundType === 'boss') {
       if (!this.bossSpawned) {
-        this.spawn('boss');
+        this.spawnAt('boss', this.scene.scale.width / 2, 105);
         this.bossSpawned = true;
       }
-      return;
+      return 0;
     }
 
-    if (time < this.nextSpawnAt) {
-      return;
+    if (!definition || alreadySpawned >= definition.totalEnemyCount || time < this.nextSpawnAt) return 0;
+
+    const spawnCount = Math.min(definition.waveSize, definition.totalEnemyCount - alreadySpawned);
+    for (let index = 0; index < spawnCount; index += 1) {
+      this.spawn(this.chooseEnemy(definition));
     }
 
-    for (let index = 0; index < this.waveManager.getPackSize(elapsedSeconds); index += 1) {
-      this.spawn(this.waveManager.getEnemyKind(elapsedSeconds));
-    }
+    this.nextSpawnAt = time + definition.waveIntervalMs;
+    return spawnCount;
+  }
 
-    this.nextSpawnAt = time + this.waveManager.getSpawnInterval(elapsedSeconds);
+  private chooseEnemy(definition: RoundDefinition): EnemyKind {
+    const totalWeight = definition.enemyComposition.reduce((total, entry) => total + entry.weight, 0);
+    let roll = Math.random() * totalWeight;
+    for (const entry of definition.enemyComposition) {
+      roll -= entry.weight;
+      if (roll <= 0) return entry.kind;
+    }
+    return definition.enemyComposition.at(-1)?.kind ?? 'grunt';
   }
 
   private spawn(kind: EnemyKind): void {
     const { width, height } = this.scene.scale;
-    const margin = 44;
+    const margin = 22;
     const side = Phaser.Math.Between(0, 3);
-    const x = side === 0 ? -margin : side === 1 ? width + margin : Phaser.Math.Between(0, width);
-    const y = side === 2 ? -margin : side === 3 ? height + margin : Phaser.Math.Between(0, height);
+    const x = side === 0 ? margin : side === 1 ? width - margin : Phaser.Math.Between(margin, width - margin);
+    const y = side === 2 ? margin : side === 3 ? height - margin : Phaser.Math.Between(margin, height - margin);
+    this.spawnAt(kind, x, y);
+  }
+
+  spawnAt(kind: EnemyKind, x: number, y: number): Enemy {
     const enemy = new Enemy(this.scene, x, y, enemyConfigs[kind]);
     this.enemies.add(enemy);
+    return enemy;
   }
 }

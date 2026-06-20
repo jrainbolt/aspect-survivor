@@ -21,15 +21,23 @@ Controls:
 ## Run Structure
 
 1. Choose Amazon, Sorcerer, or Paladin. Each hero has distinct base stats, a passive, and a starting weapon.
-2. Survive three 60-second rounds in Act 1.
+2. Clear three enemy waves in Act 1: 40 enemies in Round 1, 55 in Round 2, and 70 in Round 3.
 3. Visit the campfire after each normal round. Healing, one weapon upgrade, and one divine blessing can each be claimed once per visit.
 4. Defeat the Act Guardian in the boss round.
-5. Choose a major blessing and complete Act 1.
-6. Review run statistics, records, and damage sources on the run summary screen.
+5. Defeating the Guardian completes Act 1 and opens the run summary.
+6. Review run statistics, records, and damage sources.
 
 Current weapons are Javelin, Arcane Bolt, and Sword & Shield. Current divine favors come from Jupiter, Mars, and Neptune.
 
+Act 1 enemies have distinct silhouettes and roles: grunts pursue directly, runners weave, and brutes telegraph heavy charges. The Act Guardian uses three health phases, telegraphed ground strikes and charges, and summons reinforcements during the fight.
+
+Amazon and Sorcerer use directional placeholder hero silhouettes rather than generic circles. Combat, pickups, leveling, camp purchases, boss attacks, and victory use lightweight generated Web Audio sounds with no external audio assets.
+
 The Paladin fights at close range. Sword Hack sweeps a short multi-target arc; Shield Bash delivers heavy knockback, briefly stuns enemies, and grants +15 armor for one second when it connects. Shield Guard reduces incoming contact damage by 20%.
+
+Menus use a shared fantasy UI framework for panels, buttons, cards, dividers, stat rows, and data-driven character portraits. The campfire presents the current build beside its reward choices, and divine favors use reusable god-themed blessing cards.
+
+Paladins choose one run specialization at the campfire: Crusader, Templar, or Guardian. Divine favors have three visible ranks, and the camp merchant sells healing, weapon levels, permanent stats, and blessing reroll tokens. See `TUNING.md` for the data files that control balance and presentation values.
 
 ## Player Stats
 
@@ -43,7 +51,7 @@ Final player stats are calculated from layered sources:
 
 The pause menu shows core, combat, utility, and current-build details. Some expandable stats currently remain at defaults until future items or effects modify them.
 
-Damage and run trackers record weapon/blessing damage, survival time, kills, bosses, gold, XP, healing, and damage taken. The run summary shows the top five damage sources and highlights new persistent records.
+Damage and run trackers record weapon/blessing damage, survival time, round clear times, kills, bosses, gold, XP, healing, and damage taken. The run summary shows victory status, clear times, the top five damage sources, and new persistent records.
 
 ## Build
 
@@ -60,9 +68,9 @@ Push to `main` to run `.github/workflows/deploy.yml`. In repository settings, se
 ## Architecture
 
 - `src/entities`: player, enemies, projectiles, and XP orbs.
-- `src/game/data`: data-driven character, weapon, and blessing definitions.
+- `src/game/data`: data-driven character, weapon, blessing, and round definitions.
 - `src/game/systems`: stat calculation, damage/run tracking, run state, projectile and melee weapons, blessings, effects, saves, fullscreen, and audio preparation.
-- `src/managers`: waves, spawning, XP, and level-up upgrades.
+- `src/managers`: round lifecycle, bounded wave spawning, XP, and level-up upgrades.
 - `src/scenes`: main menu, character select, combat, campfire, blessing, and run-summary flow.
 - `src/ui`: HUD, menu controls, arena frame, pause menu, and level-up panel.
 
