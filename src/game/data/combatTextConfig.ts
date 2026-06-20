@@ -6,4 +6,6 @@ export const combatTextConfig = {
   lightning: { fontSize: 22, durationMs: 820, rise: 52, color: '#ffe66d' },
   bleed: { fontSize: 18, durationMs: 720, rise: 40, color: '#d94b64' },
   water: { fontSize: 20, durationMs: 780, rise: 46, color: '#55d6ff' },
+  fire: { fontSize: 20, durationMs: 800, rise: 48, color: '#ff7a45' },
+  ice: { fontSize: 20, durationMs: 800, rise: 48, color: '#a9f3ff' },
 } as const;

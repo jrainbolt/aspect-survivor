@@ -4,6 +4,7 @@ export class PlaceholderTextureFactory {
   static create(scene: Phaser.Scene): void {
     this.createHeroes(scene);
     this.createEnemies(scene);
+    this.createSorcererProjectiles(scene);
   }
 
   private static createHeroes(scene: Phaser.Scene): void {
@@ -59,6 +60,24 @@ export class PlaceholderTextureFactory {
       g.fillStyle(0xffd166).fillTriangle(9, 20, 15, 8, 20, 20).fillTriangle(20, 20, 24, 5, 29, 20).fillTriangle(29, 20, 35, 8, 40, 20);
       g.fillStyle(0x1a0b29).fillCircle(18, 28, 4).fillCircle(30, 28, 4);
       g.generateTexture('enemy-boss', 48, 48).destroy();
+    }
+  }
+
+  private static createSorcererProjectiles(scene: Phaser.Scene): void {
+    if (!scene.textures.exists('projectile-pyromancer')) {
+      const g = scene.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0xffffff).fillCircle(11, 11, 8).fillTriangle(2, 11, 9, 4, 9, 18);
+      g.generateTexture('projectile-pyromancer', 22, 22).destroy();
+    }
+    if (!scene.textures.exists('projectile-cryomancer')) {
+      const g = scene.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0xffffff).fillTriangle(2, 10, 16, 2, 12, 10).fillTriangle(2, 10, 16, 18, 12, 10);
+      g.generateTexture('projectile-cryomancer', 20, 20).destroy();
+    }
+    if (!scene.textures.exists('projectile-stormcaller')) {
+      const g = scene.make.graphics({ x: 0, y: 0 }, false);
+      g.fillStyle(0xffffff).fillTriangle(2, 8, 11, 2, 8, 9).fillTriangle(8, 9, 18, 7, 9, 16);
+      g.generateTexture('projectile-stormcaller', 20, 18).destroy();
     }
   }
 }

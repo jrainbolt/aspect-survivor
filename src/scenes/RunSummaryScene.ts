@@ -7,7 +7,8 @@ import { SaveSystem } from '../game/systems/SaveSystem';
 import type { RunState } from '../game/types';
 import { MenuButton } from '../ui/MenuButton';
 import { PortraitFrame } from '../game/ui/PortraitFrame';
-import { specializationDefinitions } from '../game/data/specializations';
+import { specializationCatalog } from '../game/data/specializationCatalog';
+import { SpecializationSystem } from '../game/systems/SpecializationSystem';
 
 export class RunSummaryScene extends Phaser.Scene {
   private buttons: MenuButton[] = [];
@@ -47,7 +48,7 @@ export class RunSummaryScene extends Phaser.Scene {
       color: '#ffd166', fontFamily: 'Inter, Arial, sans-serif', fontSize: '18px', fontStyle: '900',
     }).setOrigin(0.5);
     this.add.text(centerX, 108, this.state.specializationId
-      ? `${specializationDefinitions[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'No Specialization', {
+      ? `${specializationCatalog[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'No Specialization', {
       color: '#9aa6b2', fontFamily: 'Inter, Arial, sans-serif', fontSize: '13px', fontStyle: '800',
     }).setOrigin(0.5);
     new PortraitFrame(this, narrow ? 66 : centerX - 250, 78, this.state.characterId, 78);
@@ -100,7 +101,9 @@ export class RunSummaryScene extends Phaser.Scene {
   }
 
   private retry(): void {
-    RunStateSystem.set(this.registry, RunStateSystem.create(this.state.characterId));
+    const nextState = RunStateSystem.create(this.state.characterId);
+    if (this.state.specializationId) SpecializationSystem.choose(nextState, this.state.specializationId);
+    RunStateSystem.set(this.registry, nextState);
     this.scene.start('GameScene');
   }
   private select(index: number): void { this.selectedIndex = Phaser.Math.Wrap(index, 0, this.buttons.length); this.updateSelection(); }

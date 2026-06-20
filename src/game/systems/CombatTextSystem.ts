@@ -10,6 +10,8 @@ export class CombatTextSystem {
   enemyDamage(enemy: Enemy, amount: number, damageType: DamageType, critical = false): void {
     const config = critical ? combatTextConfig.critical
       : damageType === 'lightning' ? combatTextConfig.lightning
+        : damageType === 'fire' ? combatTextConfig.fire
+          : damageType === 'ice' ? combatTextConfig.ice
         : damageType === 'bleed' ? combatTextConfig.bleed
           : damageType === 'water' ? combatTextConfig.water : combatTextConfig.enemyDamage;
     this.float(enemy.x, enemy.y - 26, `${critical ? 'CRIT! ' : ''}${Math.round(amount)}`, config, critical ? 1.35 : 1);

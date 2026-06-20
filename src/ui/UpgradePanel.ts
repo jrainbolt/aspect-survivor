@@ -57,6 +57,9 @@ export class UpgradePanel {
       fontSize: '21px',
       fontStyle: '800',
     }).setOrigin(0.5);
+    const category = this.scene.add.text(0, -62, choice.category === 'hero' ? 'HERO UPGRADE' : 'GENERIC UPGRADE', {
+      color: choice.category === 'hero' ? '#ffd166' : '#7ee8e1', fontFamily: 'Inter, Arial, sans-serif', fontSize: '10px', fontStyle: '900',
+    }).setOrigin(0.5);
     const description = this.scene.add.text(0, 18, choice.description, {
       color: '#dbe4ee',
       align: 'center',
@@ -70,7 +73,7 @@ export class UpgradePanel {
     card.on(Phaser.Input.Events.POINTER_OVER, () => this.select(cardIndex));
     card.on(Phaser.Input.Events.POINTER_DOWN, () => this.confirmSelection());
 
-    return this.scene.add.container(x, y, [card, title, description]);
+    return this.scene.add.container(x, y, [card, category, title, description]);
   }
 
   private registerKeyboard(): void {

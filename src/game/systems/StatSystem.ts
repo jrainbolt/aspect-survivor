@@ -1,6 +1,6 @@
 import { characterDefinitions } from '../data/characters';
 import { WEAPON_LEVEL_SIZE_BONUS, weaponDefinitions } from '../data/weapons';
-import { specializationDefinitions } from '../data/specializations';
+import { specializationCatalog } from '../data/specializationCatalog';
 import { blessingRanks, getBlessingRank } from '../data/blessingRanks';
 import type { RunState } from '../types';
 import { DEFAULT_PLAYER_STATS, type PlayerStats, type PlayerStatKey, type PlayerStatValues, type StatModifier } from '../../types/stats';
@@ -84,7 +84,7 @@ export class StatSystem {
   }
 
   private static getSpecializationModifier(id: NonNullable<RunState['specializationId']>, level: number): StatModifier {
-    const base = specializationDefinitions[id].statModifier;
+    const base = specializationCatalog[id].statModifier;
     const flat = Object.fromEntries(Object.entries(base.flat ?? {}).map(([key, value]) => [key, value * Math.max(1, level)])) as StatModifier['flat'];
     return { ...base, flat };
   }

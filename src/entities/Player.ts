@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { CharacterDefinition, SpecializationId } from '../game/types';
 import type { PlayerStats } from '../types/stats';
 import { PaladinAnimator } from '../game/entities/PaladinAnimator';
+import { specializationCatalog } from '../game/data/specializationCatalog';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public readonly stats: PlayerStats;
@@ -10,6 +11,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private invulnerableUntil = 0;
   private readonly facingDirection = new Phaser.Math.Vector2(1, 0);
   private readonly paladinAnimator?: PaladinAnimator;
+  private readonly sorcererMagic?: Phaser.GameObjects.Container;
 
   constructor(scene: Phaser.Scene, x: number, y: number, character: CharacterDefinition, stats: PlayerStats, specializationId?: SpecializationId) {
     super(scene, x, y, character.id === 'paladin' ? 'player' : `hero-${character.id}`);
@@ -23,6 +25,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (character.id === 'paladin') {
       this.setVisible(false);
       this.paladinAnimator = new PaladinAnimator(scene, x, y, specializationId);
+    } else if (character.id === 'sorcerer') {
+      const color = specializationId ? specializationCatalog[specializationId].color : character.visual.accentColor;
+      const ring = scene.add.circle(0, 0, 27).setStrokeStyle(2, color, 0.55);
+      const orb = scene.add.circle(30, 0, 6, color, 0.95).setStrokeStyle(2, 0xffffff, 0.8);
+      const spark = scene.add.circle(-22, 13, 3, 0xffffff, 0.8);
+      this.sorcererMagic = scene.add.container(x, y, [ring, orb, spark]).setDepth(9);
     }
 
     const keyboard = scene.input.keyboard;
@@ -61,6 +69,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const alpha = time < this.invulnerableUntil ? 0.55 : 1;
     this.setAlpha(alpha);
     this.paladinAnimator?.update(this.x, this.y, alpha, direction.lengthSq() > 0, time);
+    this.sorcererMagic?.setPosition(this.x, this.y).setRotation(time * 0.0015).setAlpha(alpha);
     const healing = Math.min(this.stats.maxHp - this.stats.currentHp, this.stats.hpRegen * delta / 1000);
     this.stats.currentHp += healing;
     return healing;

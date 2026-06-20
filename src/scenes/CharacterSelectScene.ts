@@ -86,7 +86,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   private confirm(): void {
     const character = characters[this.selectedIndex];
     RunStateSystem.set(this.registry, RunStateSystem.create(character.id));
-    this.scene.start('GameScene');
+    this.scene.start('SpecializationSelectScene');
   }
 
   private back(): void { this.scene.start('MainMenuScene'); }

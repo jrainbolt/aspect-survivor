@@ -22,14 +22,14 @@ Controls:
 
 ## Run Structure
 
-1. Choose Amazon, Sorcerer, or Paladin. Each hero has distinct base stats, a passive, and a starting weapon.
+1. Choose Amazon, Sorcerer, or Paladin, then select a specialization before combat.
 2. Clear three enemy waves in Act 1: 40 enemies in Round 1, 55 in Round 2, and 70 in Round 3.
-3. Visit the campfire after each normal round. Choose or advance a specialization, claim one divine favor, make repeatable shop purchases as gold allows, then start the next encounter.
+3. Visit the campfire after each normal round. Advance the selected specialization, claim one divine favor, make repeatable shop purchases as gold allows, then start the next encounter.
 4. Defeat the Act Guardian in the boss round.
 5. Defeating the Guardian completes Act 1 and opens the run summary.
 6. Review run statistics, records, and damage sources.
 
-Current weapons are Javelin, Arcane Bolt, and Sword & Shield. Current divine favors come from Jupiter, Mars, and Neptune.
+Current weapon families are Javelin, elemental Sorcerer bolts, and Sword & Shield. Current divine favors come from Jupiter, Mars, and Neptune.
 
 Act 1 enemies have distinct silhouettes and roles: grunts pursue directly, runners weave, and brutes telegraph heavy charges. The Act Guardian uses three health phases, telegraphed ground strikes and charges, and summons reinforcements during the fight.
 
@@ -39,7 +39,9 @@ The Paladin fights at close range. Sword Hack sweeps a short multi-target arc; S
 
 Menus use a shared fantasy UI framework for panels, buttons, cards, dividers, stat rows, and data-driven character portraits. The campfire presents the current build beside its reward choices, and divine favors use reusable god-themed blessing cards.
 
-Paladins choose one run specialization at the campfire: Crusader, Templar, or Guardian. Divine favors have three visible ranks, and the camp merchant sells healing, weapon levels, permanent stats, and blessing reroll tokens. See `TUNING.md` for the data files that control balance and presentation values.
+Specializations are selected before Round 1 and advanced in town. Paladin paths are Crusader, Templar, and Guardian; Sorcerer paths are Pyromancer, Cryomancer, and Stormcaller. Divine favors have three visible ranks, and the camp merchant sells healing, weapon levels, permanent stats, and blessing reroll tokens. See `TUNING.md` for balance locations.
+
+Level-up choices mix generic stat upgrades with labeled hero upgrades. Paladin upgrades modify sword and shield behavior, Sorcerer upgrades improve spell output and elemental effects, and Amazon currently has an initial set of ranged-stat identity upgrades.
 
 ## Player Stats
 
@@ -73,7 +75,7 @@ Push to `main` to run `.github/workflows/deploy.yml`. In repository settings, se
 - `src/game/data`: data-driven character, weapon, blessing, and round definitions.
 - `src/game/systems`: stat calculation, damage/run tracking, run state, projectile and melee weapons, boss mechanics, blessings, effects, saves, fullscreen, and generated audio.
 - `src/managers`: round lifecycle, bounded wave spawning, XP, and level-up upgrades.
-- `src/scenes`: main menu, character select, combat, campfire, blessing, and run-summary flow.
+- `src/scenes`: main menu, character and specialization select, combat, campfire, blessing, and run-summary flow.
 - `src/ui`: HUD, menu controls, arena frame, pause menu, and level-up panel.
 
 New content is added through the registries in `src/game/data`. Combat behavior is coordinated by systems instead of being hardcoded into scene UI.

@@ -15,6 +15,14 @@ Gameplay values are intentionally centralized in data files.
 - `src/game/data/weapons.ts`: base Sword Hack and Shield Bash values before specialization modifiers.
 - `src/game/data/weapons.ts`: `WEAPON_LEVEL_DAMAGE_BONUS` controls the damage gained from each weapon level.
 
+## Specialization Flow And Sorcerer Paths
+
+- `src/game/data/specializationCatalog.ts`: shared registry used by specialization selection and build UI.
+- `src/game/data/sorcererSpecializations.ts`: Pyromancer, Cryomancer, and Stormcaller projectile, damage, speed, cooldown, and presentation values.
+- `src/game/systems/SorcererWeaponSystem.ts`: burn/explosion, frost slow/freeze, and lightning-chain behavior.
+- `src/game/data/amazonSpecializations.ts`: temporary data-driven Wayfarer baseline until full Amazon paths are implemented.
+- `src/upgrades/Upgrade.ts`: generic and hero-specific level-up pools.
+
 ## Blessing Ranks
 
 - `src/game/data/blessingRanks.ts`: rank caps, proc chances, bounce counts, bleed scaling, duration, knockback, and slow duration.

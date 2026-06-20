@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import type { DamageSource, DamageType, WeaponId } from '../game/types';
+import type { DamageSource, DamageType, SorcererSpecializationId, WeaponId } from '../game/types';
 
-interface ProjectileFireConfig {
+export interface ProjectileFireConfig {
   direction: Phaser.Math.Vector2;
   damage: number;
   speed: number;
@@ -15,6 +15,7 @@ interface ProjectileFireConfig {
   sourceName: string;
   damageType: DamageType;
   critical: boolean;
+  sorcererPath?: SorcererSpecializationId;
 }
 
 export class Projectile extends Phaser.Physics.Arcade.Image {
@@ -23,6 +24,7 @@ export class Projectile extends Phaser.Physics.Arcade.Image {
   public weaponId: WeaponId = 'javelin';
   public knockback = 0;
   public source: DamageSource = { sourceId: 'unknown', sourceName: 'Unknown', damageType: 'unknown' };
+  public sorcererPath?: SorcererSpecializationId;
   private pierceRemaining = 0;
   private readonly hitEnemyIds = new Set<number>();
 
@@ -38,9 +40,12 @@ export class Projectile extends Phaser.Physics.Arcade.Image {
     this.damage = config.damage;
     this.weaponId = config.weaponId;
     this.knockback = config.knockback;
-    this.source = { sourceId: config.weaponId, sourceName: config.sourceName, damageType: config.damageType, critical: config.critical };
+    this.source = { sourceId: config.sorcererPath ?? config.weaponId, sourceName: config.sourceName, damageType: config.damageType, critical: config.critical };
+    this.sorcererPath = config.sorcererPath;
     this.pierceRemaining = config.pierce;
     this.hitEnemyIds.clear();
+    this.setTexture(config.sorcererPath ? `projectile-${config.sorcererPath}` : 'projectile');
+    this.setCircle(5, this.width / 2 - 5, this.height / 2 - 5);
     this.setTint(config.color).setScale(config.scale);
     this.setVelocity(config.direction.x * config.speed, config.direction.y * config.speed);
     this.setRotation(config.direction.angle());

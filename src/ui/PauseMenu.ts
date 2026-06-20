@@ -6,8 +6,9 @@ import { weaponDefinitions } from '../game/data/weapons';
 import type { RunState } from '../game/types';
 import { MenuButton } from './MenuButton';
 import { PortraitFrame } from '../game/ui/PortraitFrame';
-import { specializationDefinitions } from '../game/data/specializations';
+import { specializationCatalog } from '../game/data/specializationCatalog';
 import { getBlessingRank } from '../game/data/blessingRanks';
+import { upgradeCatalog } from '../upgrades/Upgrade';
 
 export class PauseMenu {
   private container?: Phaser.GameObjects.Container;
@@ -27,6 +28,7 @@ export class PauseMenu {
     const stats = state.playerStats;
     const character = characterDefinitions[state.characterId];
     const weapon = weaponDefinitions[state.weaponId];
+    const weaponName = state.specializationId ? specializationCatalog[state.specializationId].weaponName : weapon.displayName;
     const { width, height } = this.scene.scale;
     const panelWidth = Math.min(1080, width - 32);
     const panelHeight = Math.min(680, height - 24);
@@ -57,9 +59,10 @@ export class PauseMenu {
 
     const blessingLines = this.getBlessingLines(state);
     const build = this.createSection(narrow ? left + columnWidth : left, top + 350, narrow ? columnWidth : contentWidth * 0.55, 'Current Build', [
-      `Weapon: ${weapon.displayName}  Level ${state.weaponLevel}`,
-      `Specialization: ${state.specializationId ? `${specializationDefinitions[state.specializationId].displayName} ${this.roman(state.specializationLevel)}` : 'None'}`,
+      `Weapon: ${weaponName}  Level ${state.weaponLevel}`,
+      `Specialization: ${state.specializationId ? `${specializationCatalog[state.specializationId].displayName} ${this.roman(state.specializationLevel)}` : 'None'}`,
       `Passive: ${character.passiveLabel}`,
+      `Hero Upgrades: ${this.getHeroUpgradeNames(state).join(', ') || 'None'}`,
       ...blessingLines,
     ]);
     const status = this.createSection(narrow ? left : left + contentWidth * 0.58, narrow ? top + 530 : top + 350, narrow ? contentWidth : contentWidth * 0.42, 'Status Effects',
@@ -103,6 +106,10 @@ export class PauseMenu {
       ids.forEach((id) => counts.set(`${blessingDefinitions[id].displayName} ${this.roman(getBlessingRank(state.blessings, id))}`, 1));
       return [`${god}: ${[...counts.keys()].join(', ')}`];
     });
+  }
+
+  private getHeroUpgradeNames(state: RunState): string[] {
+    return state.heroUpgrades.map((id) => upgradeCatalog.find((upgrade) => upgrade.id === id)?.title ?? id);
   }
 
   private registerKeyboard(): void {

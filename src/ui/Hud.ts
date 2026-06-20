@@ -5,6 +5,7 @@ import { blessingDefinitions } from '../game/data/blessings';
 import { weaponDefinitions } from '../game/data/weapons';
 import type { RunState } from '../game/types';
 import { getBlessingRank } from '../game/data/blessingRanks';
+import { specializationCatalog } from '../game/data/specializationCatalog';
 
 export class Hud {
   private readonly hpBar: Phaser.GameObjects.Rectangle;
@@ -67,7 +68,8 @@ export class Hud {
     this.bossBar.setX(this.scene.scale.width / 2 - bossWidth / 2);
     this.bossFill.setX(this.scene.scale.width / 2 - bossWidth / 2);
     this.bossText.setX(this.scene.scale.width / 2);
-    this.weaponText.setText(`${weaponDefinitions[state.weaponId].displayName}  LV ${state.weaponLevel}`);
+    const weaponName = state.specializationId ? specializationCatalog[state.specializationId].weaponName : weaponDefinitions[state.weaponId].displayName;
+    this.weaponText.setText(`${weaponName}  LV ${state.weaponLevel}`);
     this.weaponText.setY(this.scene.scale.height - 48);
     this.blessingText.setText(this.formatBlessings(state));
     this.blessingText.setY(this.scene.scale.height - 26);

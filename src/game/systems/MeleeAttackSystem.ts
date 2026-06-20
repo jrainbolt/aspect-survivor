@@ -33,6 +33,7 @@ export class MeleeAttackSystem {
     private readonly getWeaponLevel: () => number,
     private readonly getSpecialization: () => SpecializationId | undefined,
     private readonly getSpecializationLevel: () => number,
+    private readonly getHeroUpgrades: () => string[],
     private readonly callbacks: MeleeAttackCallbacks,
   ) {}
 
@@ -49,7 +50,12 @@ export class MeleeAttackSystem {
 
     if (time < this.nextWindupAt) return;
     const distance = this.getSurfaceDistance(player, target);
-    const [sword, bash] = SpecializationSystem.getAttacks(this.getSpecialization(), this.getSpecializationLevel());
+    const [baseSword, baseBash] = SpecializationSystem.getAttacks(this.getSpecialization(), this.getSpecializationLevel());
+    const upgrades = this.getHeroUpgrades();
+    const sword = { ...baseSword, arcDegrees: baseSword.arcDegrees * (upgrades.includes('wide-cleave') ? 1.35 : 1) };
+    const bash = { ...baseBash,
+      baseDamage: baseBash.baseDamage * (upgrades.includes('shield-mastery') ? 1.25 : 1),
+      knockback: baseBash.knockback + (upgrades.includes('crushing-bash') ? 100 : 0) };
     if (distance <= sword.range + 16 && time >= (this.nextAttackAt.get(sword.id) ?? 0)
       && !this.activeAttacks.some((attack) => attack.definition.id === sword.id)) {
       this.startAttack(time, player, sword);

@@ -37,6 +37,7 @@ export class RunStateSystem {
       blessingRerolls: 0,
       permanentStatModifiers: [],
       temporaryStatModifiers: [],
+      heroUpgrades: [],
       damageSources: {},
       runStats: createRunStats(),
       campRewards: { heal: false, weapon: false, blessing: false, specialization: false },
@@ -77,6 +78,7 @@ export class RunStateSystem {
     state.blessingRerolls ??= 0;
     state.permanentStatModifiers ??= [];
     state.temporaryStatModifiers ??= [];
+    state.heroUpgrades ??= [];
     state.damageSources ??= {};
     state.runStats ??= {
       ...createRunStats(),

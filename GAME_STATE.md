@@ -15,14 +15,14 @@ This is the canonical prompt-ready snapshot of the implemented game. The README 
 
 1. Main menu displays records and controls.
 2. Character selection: Amazon, Sorcerer, or Paladin.
-3. Clear Act 1 Round 1: 40 enemies in waves of 5.
-4. Visit the Ember Refuge town.
-5. Clear Round 2: 55 enemies in waves of 7.
-6. Visit town again.
-7. Clear Round 3: 70 enemies in waves of 9.
-8. Visit town and prepare for the boss.
-9. Defeat the Act Guardian.
-10. Show the Act 1 victory sequence and run summary.
+3. Select a persistent hero specialization.
+4. Clear Act 1 Round 1: 40 enemies in waves of 5.
+5. Visit the Ember Refuge town.
+6. Clear Round 2: 55 enemies in waves of 7.
+7. Visit town again.
+8. Clear Round 3: 70 enemies in waves of 9.
+9. Visit town and prepare for the boss.
+10. Defeat the Act Guardian, then show the victory sequence and run summary.
 
 Normal rounds end only after the configured enemy target has spawned and every living enemy is defeated. Player death ends the run immediately. Elapsed time is tracked for records and clear-time statistics, not as a round-ending condition.
 
@@ -33,14 +33,18 @@ Normal rounds end only after the configured enemy target has spawned and every l
 - Fast ranged hero with +10% move speed.
 - Starts with Javelin.
 - Javelins are fast, long-range projectiles with one additional pierce.
+- Currently selects the baseline Wayfarer path; full Amazon specialization paths remain future work.
 - Directional procedural hunter silhouette.
 
 ### Sorcerer
 
 - Ranged spellcaster with +15% spell damage.
-- Starts with Arcane Bolt.
-- Slower, higher-damage single-target projectile.
-- Directional procedural robed silhouette.
+- Starts from the Arcane Bolt weapon family, transformed by the selected path.
+- Pyromancer: Fireball applies burn and creates impact explosions.
+- Cryomancer: Frost Bolt slows and can briefly freeze enemies.
+- Stormcaller: fast Lightning Bolts chain into nearby targets.
+- Path ranks improve elemental behavior, and Chain Reaction further enhances each element.
+- Directional procedural robed silhouette with a path-colored floating magic orbit.
 
 ### Paladin
 
@@ -57,7 +61,14 @@ Normal rounds end only after the configured enemy target has spawned and every l
 - Crusader: broader, stronger, faster sword attacks.
 - Templar: armor, stronger guarding, and heavier shield bashes.
 - Guardian: long piercing pike thrust with outbound and return damage.
-- Specializations can be selected and advanced during later town visits, up to rank III.
+- Specializations are selected before Round 1 and advanced during later town visits, up to rank III.
+
+## Sorcerer Specializations
+
+- Pyromancer: area damage, burn-over-time, fire particles, and compact explosions.
+- Cryomancer: crowd control through slows, freeze chance, and frost-shard impacts.
+- Stormcaller: high projectile speed, chain burst damage, and mobility bonus.
+- Each path has distinct projectile color, damage, speed, cooldown, effect scaling, and weapon naming.
 
 ## Enemies And Boss
 
@@ -73,7 +84,11 @@ Normal rounds end only after the configured enemy target has spawned and every l
 
 - Enemies drop animated XP orbs that attract within pickup range.
 - Level-ups pause combat and present three random keyboard/mouse-selectable upgrades.
-- Current basic upgrades affect damage, attack speed, max HP, and move speed.
+- Each set includes a labeled Hero Upgrade while an unclaimed hero option remains; other cards are labeled Generic Upgrade.
+- Generic upgrades affect damage, attack speed, max HP, and move speed.
+- Paladin hero upgrades improve bash damage/knockback, sword arc, armor, and attack speed.
+- Sorcerer hero upgrades add projectile count, spell damage, attack speed, and stronger elemental effects.
+- Amazon has initial ranged-stat upgrades for pierce, movement, critical chance, and projectile speed/size.
 - Final stats are calculated from character base stats, character passive, weapon level, blessings, permanent upgrades, and temporary modifiers.
 - Expanded stats include HP, damage, flat damage, attack speed, movement, armor, regeneration, critical stats, projectile stats, pierce, knockback, pickup range, XP/gold gain, luck, cooldown reduction, spell damage, and contact reduction.
 
@@ -89,7 +104,7 @@ Normal rounds end only after the configured enemy target has spawned and every l
 
 Town choices are visually and navigationally ordered as:
 
-1. Weapon Specialization
+1. Weapon Specialization advancement
 2. Divine Favor
 3. Supply Shop
 4. Start Next Round
@@ -133,11 +148,11 @@ Shop purchases are repeatable while the player has enough gold. The town shows c
 
 ## Architecture Map
 
-- `src/game/data`: characters, weapons, blessings/ranks, specializations, rounds, merchant inventory, portraits, stat display, and combat-text tuning.
-- `src/game/systems`: weapons, melee, boss encounter, blessings, stats, audio, effects, combat text, merchants, specializations, run state/stats, damage tracking, saves, and fullscreen.
+- `src/game/data`: characters, weapons, blessings/ranks, shared and hero-specific specializations, rounds, merchant inventory, portraits, upgrades, stat display, and combat-text tuning.
+- `src/game/systems`: shared projectile weapons, Sorcerer elemental weapons, melee, boss encounter, blessings, stats, audio, effects, combat text, merchants, specializations, run state/stats, damage tracking, saves, and fullscreen.
 - `src/managers`: round completion, bounded wave spawning, XP, and level-up choices.
 - `src/entities`: player, enemy behaviors, projectiles, and XP orbs.
-- `src/scenes`: main menu, character select, game, town, blessing selection, and run summary.
+- `src/scenes`: main menu, character select, specialization select, game, town, blessing selection, and run summary.
 - `src/game/ui` and `src/ui`: reusable fantasy panels/cards, HUD, pause menu, buttons, arena frame, and upgrade panel.
 
 Core gameplay definitions are data-driven. New characters, weapons, blessings, specializations, rounds, and merchant items should be added through their data registries, with behavior delegated to systems instead of scene UI.
@@ -145,7 +160,7 @@ Core gameplay definitions are data-driven. New characters, weapons, blessings, s
 ## Known Scope Limits
 
 - Only Act 1 is implemented; there is no Act 2 run continuation.
-- Three heroes, three starting weapon kits, three blessings, and three Paladin specializations are implemented.
+- Three heroes, three weapon families, three blessings, three Paladin paths, three Sorcerer paths, and one temporary Amazon baseline path are implemented.
 - Visuals are procedural placeholders rather than final sprites or animation sheets.
 - Audio is generated placeholder synthesis rather than final sound assets or music.
 - Controls are keyboard and pointer based; dedicated touch movement controls are not implemented.

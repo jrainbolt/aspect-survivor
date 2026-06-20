@@ -12,7 +12,7 @@ import { PortraitFrame } from '../game/ui/PortraitFrame';
 import { createStatRows } from '../game/ui/StatRows';
 import { MenuButton } from '../ui/MenuButton';
 import { WeaponCard } from '../game/ui/WeaponCard';
-import { specializations, specializationDefinitions } from '../game/data/specializations';
+import { getSpecializationsForCharacter, specializationCatalog } from '../game/data/specializationCatalog';
 import { SpecializationSystem } from '../game/systems/SpecializationSystem';
 import { merchantItems } from '../game/data/merchantItems';
 import { MerchantSystem } from '../game/systems/MerchantSystem';
@@ -106,7 +106,8 @@ export class TownScene extends Phaser.Scene {
       this.add.text(x, top + 126, `${Math.ceil(stats.currentHp)} / ${stats.maxHp} HP`, fantasyText(10, '#ffffff', '900')).setOrigin(0.5);
       const compactRows = [`DMG ${stats.damage.toFixed(2)}x`, `ARM ${Math.round(stats.armor)}`, `ATK ${stats.attackSpeed.toFixed(2)}x`, `MOVE ${Math.round(stats.moveSpeed)}`, `GOLD ${this.state.gold}`];
       this.add.text(x, top + 158, compactRows.join('  ·  '), { ...fantasyText(12, '#ddd5c7', '900'), fixedWidth: width - 36, align: 'center', wordWrap: { width: width - 40 } }).setOrigin(0.5, 0);
-      this.add.text(x, top + 207, `${weaponDefinitions[this.state.weaponId].displayName}  ·  Level ${this.state.weaponLevel}`, fantasyText(14, '#f5ead3', '900')).setOrigin(0.5);
+      const weaponName = this.state.specializationId ? specializationCatalog[this.state.specializationId].weaponName : weaponDefinitions[this.state.weaponId].displayName;
+      this.add.text(x, top + 207, `${weaponName}  ·  Level ${this.state.weaponLevel}`, fantasyText(14, '#f5ead3', '900')).setOrigin(0.5);
       const blessingNames = [...new Set(this.state.blessings)].map((id) => `${blessingDefinitions[id].displayName} ${this.roman(getBlessingRank(this.state.blessings, id))}`).join(' · ') || 'No divine favors';
       this.add.text(x, top + 238, blessingNames, { ...fantasyText(12, FantasyTheme.muted), fixedWidth: width - 36, align: 'center' }).setOrigin(0.5);
       return;
@@ -129,7 +130,7 @@ export class TownScene extends Phaser.Scene {
     createStatRows(this, x - width / 2 + 34, top + 295, width - 68, rows);
     const buildY = top + 420;
     createDivider(this, x, buildY - 12, width - 60);
-    this.add.text(x - width / 2 + 34, buildY + 5, `SPECIALIZATION  ·  ${this.state.specializationId ? `${specializationDefinitions[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'Unchosen'}`, fantasyText(12, '#d8ad55', '900')).setOrigin(0, 0.5);
+    this.add.text(x - width / 2 + 34, buildY + 5, `SPECIALIZATION  ·  ${this.state.specializationId ? `${specializationCatalog[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'Unchosen'}`, fantasyText(12, '#d8ad55', '900')).setOrigin(0, 0.5);
     new WeaponCard(this, x, buildY + 86, width - 54, this.state);
     this.drawBlessings(x - width / 2 + 34, buildY + 166, width - 68);
   }
@@ -162,17 +163,18 @@ export class TownScene extends Phaser.Scene {
     const trainingY = top + (compact ? 72 : 110);
     this.add.rectangle(x, trainingY, width - 34, compact ? 48 : 112, 0x111720, 0.55).setStrokeStyle(1, 0x65522f, 0.65);
     this.add.text(x, top + (compact ? 47 : 57), 'WEAPON SPECIALIZATION', fantasyText(12, '#d8ad55', '900')).setOrigin(0.5);
-    if (this.state.characterId === 'paladin' && !this.state.specializationId) {
+    if (!this.state.specializationId) {
       const specWidth = compact ? (width - 44) / 3 : Math.min(190, (width - 64) / 3);
-      specializations.forEach((specialization, index) => {
+      const available = getSpecializationsForCharacter(this.state.characterId);
+      available.forEach((specialization, index) => {
         const buttonIndex = this.buttons.length;
-        const specX = x + (index - 1) * (specWidth + 8);
+        const specX = x + (index - (available.length - 1) / 2) * (specWidth + 8);
         this.buttons.push(new MenuButton(this, specX, trainingY + (compact ? 5 : 0), specialization.displayName,
           () => this.chooseSpecialization(specialization.id), () => this.select(buttonIndex),
           { width: specWidth, height: compact ? 36 : 76, subtitle: compact ? undefined : specialization.choiceSummary, accent: specialization.color }));
       });
-    } else if (this.state.specializationId && this.state.specializationLevel < SpecializationSystem.maxLevel) {
-      const specialization = specializationDefinitions[this.state.specializationId];
+    } else if (this.state.specializationId && this.state.specializationLevel < SpecializationSystem.getMaxLevel(this.state.specializationId)) {
+      const specialization = specializationCatalog[this.state.specializationId];
       this.add.text(x, top + (compact ? 58 : 78), `CURRENT PATH  ·  ${specialization.displayName} ${this.roman(this.state.specializationLevel)}`,
         fantasyText(12, `#${specialization.color.toString(16).padStart(6, '0')}`, '900')).setOrigin(0.5);
       const buttonIndex = this.buttons.length;
@@ -182,7 +184,7 @@ export class TownScene extends Phaser.Scene {
       advance.setDisabled(this.state.campRewards.specialization);
       this.buttons.push(advance);
     } else {
-      this.add.text(x, trainingY + 4, `PATH MASTERED  ·  ${this.state.specializationId ? `${specializationDefinitions[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'Standard Armament'}`,
+      this.add.text(x, trainingY + 4, `PATH MASTERED  ·  ${this.state.specializationId ? `${specializationCatalog[this.state.specializationId].displayName} ${this.roman(this.state.specializationLevel)}` : 'Standard Armament'}`,
         fantasyText(14, '#d8ad55', '900')).setOrigin(0.5);
     }
 
@@ -234,14 +236,14 @@ export class TownScene extends Phaser.Scene {
     if (!SpecializationSystem.choose(this.state, id)) return;
     this.audio.playTownPurchase();
     this.state.campRewards.specialization = true;
-    this.scene.restart({ feedback: `${specializationDefinitions[id].displayName} path chosen.` });
+    this.scene.restart({ feedback: `${specializationCatalog[id].displayName} path chosen.` });
   }
 
   private advanceSpecialization(): void {
     if (!this.state.specializationId || this.state.campRewards.specialization || !SpecializationSystem.upgrade(this.state)) return;
     this.audio.playTownPurchase();
     this.state.campRewards.specialization = true;
-    const specialization = specializationDefinitions[this.state.specializationId];
+    const specialization = specializationCatalog[this.state.specializationId];
     this.scene.restart({ feedback: `${specialization.displayName} advanced to ${this.roman(this.state.specializationLevel)}.` });
   }
 

@@ -6,6 +6,7 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { TownScene } from './scenes/TownScene';
 import { BlessingScene } from './scenes/BlessingScene';
 import { RunSummaryScene } from './scenes/RunSummaryScene';
+import { SpecializationSelectScene } from './scenes/SpecializationSelectScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -23,7 +24,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [MainMenuScene, CharacterSelectScene, GameScene, TownScene, BlessingScene, RunSummaryScene],
+  scene: [MainMenuScene, CharacterSelectScene, SpecializationSelectScene, GameScene, TownScene, BlessingScene, RunSummaryScene],
 };
 
 new Phaser.Game(config);

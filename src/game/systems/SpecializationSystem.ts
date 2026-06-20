@@ -1,13 +1,16 @@
 import { paladinMeleeAttacks, type MeleeAttackDefinition } from '../data/weapons';
 import { specializationDefinitions } from '../data/specializations';
-import type { RunState, SpecializationId } from '../types';
+import { isPaladinSpecialization, specializationCatalog } from '../data/specializationCatalog';
+import type { PaladinSpecializationId, RunState, SpecializationId } from '../types';
 import { StatSystem } from './StatSystem';
 
 export class SpecializationSystem {
   static readonly maxLevel = 3;
 
+  static getMaxLevel(id: SpecializationId): number { return id === 'wayfarer' ? 1 : this.maxLevel; }
+
   static choose(state: RunState, id: SpecializationId): boolean {
-    if (state.characterId !== 'paladin' || state.specializationId) return false;
+    if (state.specializationId || specializationCatalog[id].characterId !== state.characterId) return false;
     state.specializationId = id;
     state.specializationLevel = 1;
     StatSystem.syncRunState(state);
@@ -15,14 +18,14 @@ export class SpecializationSystem {
   }
 
   static upgrade(state: RunState): boolean {
-    if (!state.specializationId || state.specializationLevel >= this.maxLevel) return false;
+    if (!state.specializationId || state.specializationLevel >= this.getMaxLevel(state.specializationId)) return false;
     state.specializationLevel += 1;
     StatSystem.syncRunState(state);
     return true;
   }
 
   static getAttacks(id?: SpecializationId, level = id ? 1 : 0): readonly MeleeAttackDefinition[] {
-    if (!id) return paladinMeleeAttacks;
+    if (!id || !isPaladinSpecialization(id)) return paladinMeleeAttacks;
     const specialization = specializationDefinitions[id];
     const scaled = (multiplier: number): number => 1 + (multiplier - 1) * Math.max(1, level);
     const sword = paladinMeleeAttacks[0];
@@ -49,6 +52,12 @@ export class SpecializationSystem {
         color: specialization.color,
       },
     ];
+  }
+
+  static getDefinition(id: SpecializationId) { return specializationCatalog[id]; }
+
+  static isPaladin(id: SpecializationId | undefined): id is PaladinSpecializationId {
+    return Boolean(id && isPaladinSpecialization(id));
   }
 
 }

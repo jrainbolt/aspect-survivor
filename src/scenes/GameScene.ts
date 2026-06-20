@@ -27,6 +27,8 @@ import { PauseMenu } from '../ui/PauseMenu';
 import { UpgradePanel } from '../ui/UpgradePanel';
 import { PlaceholderTextureFactory } from '../game/visuals/PlaceholderTextureFactory';
 import { BossSystem } from '../game/systems/BossSystem';
+import { SorcererWeaponSystem } from '../game/systems/SorcererWeaponSystem';
+import { isSorcererSpecialization } from '../game/data/specializationCatalog';
 
 const SHIELD_GUARD_MODIFIER_ID = 'Shield Bash Guard: +15 Armor';
 
@@ -38,6 +40,7 @@ export class GameScene extends Phaser.Scene {
   private xpOrbs!: Phaser.Physics.Arcade.Group;
   private enemySpawner!: EnemySpawner;
   private weaponSystem?: WeaponSystem;
+  private sorcererWeaponSystem?: SorcererWeaponSystem;
   private meleeAttackSystem?: MeleeAttackSystem;
   private blessingSystem!: BlessingSystem;
   private effects!: EffectsSystem;
@@ -84,7 +87,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: false });
     this.projectiles = this.physics.add.group({ classType: Projectile, runChildUpdate: false });
     this.xpOrbs = this.physics.add.group({ classType: XpOrb, runChildUpdate: false });
-    this.upgradeManager = new UpgradeManager();
+    this.upgradeManager = new UpgradeManager(() => this.state);
     this.xpManager = new XpManager(this, this.player, this.upgradeManager);
     this.enemySpawner = new EnemySpawner(this, this.enemies);
     this.effects = new EffectsSystem(this);
@@ -99,8 +102,18 @@ export class GameScene extends Phaser.Scene {
       canResolveAttack: () => !this.isChoosingUpgrade && !this.isPaused && !this.roundEnding,
     });
     this.blessingSystem = new BlessingSystem(this, () => this.state.blessings);
-    if (this.state.weaponId === 'sword-shield') {
-      this.meleeAttackSystem = new MeleeAttackSystem(this, () => this.state.weaponLevel, () => this.state.specializationId, () => this.state.specializationLevel, {
+    if (this.state.characterId === 'sorcerer' && this.state.specializationId && isSorcererSpecialization(this.state.specializationId)) {
+      this.sorcererWeaponSystem = new SorcererWeaponSystem(
+        this,
+        () => this.state.specializationId as 'pyromancer' | 'cryomancer' | 'stormcaller',
+        () => this.state.weaponLevel,
+        () => this.state.specializationLevel,
+        () => this.state.heroUpgrades,
+        () => { this.player.playRecoil(); this.audio.playWeaponFire(); },
+      );
+    } else if (this.state.weaponId === 'sword-shield') {
+      this.meleeAttackSystem = new MeleeAttackSystem(this, () => this.state.weaponLevel, () => this.state.specializationId, () => this.state.specializationLevel,
+        () => this.state.heroUpgrades, {
         dealDamage: (enemy, amount, source) => this.handleMeleeHit(enemy, amount, source),
         onShieldGuard: () => this.activateShieldGuard(),
         onSwordSwing: () => this.audio.playMeleeSwing(),
@@ -134,6 +147,7 @@ export class GameScene extends Phaser.Scene {
     this.boss = undefined;
     this.weaponSystem = undefined;
     this.meleeAttackSystem = undefined;
+    this.sorcererWeaponSystem = undefined;
     this.shieldGuardExpiresAt = 0;
   }
 
@@ -155,8 +169,10 @@ export class GameScene extends Phaser.Scene {
     this.captureBoss();
     this.bossSystem.update(time, this.boss, this.player);
     this.weaponSystem?.update(time, this.player, this.enemies, this.projectiles);
+    this.sorcererWeaponSystem?.updateWeapon(time, this.player, this.enemies, this.projectiles);
     this.meleeAttackSystem?.update(time, this.player, this.enemies);
     this.blessingSystem.update(time, (enemy, amount, source) => this.damageEnemy(enemy, amount, source, false));
+    this.sorcererWeaponSystem?.updateEffects(time, (enemy, amount, source) => this.damageEnemy(enemy, amount, source, false));
     this.updateEnemies();
     this.updateProjectiles(time);
     this.updateOrbs();
@@ -171,6 +187,8 @@ export class GameScene extends Phaser.Scene {
       const enemy = enemyObject as Enemy;
       if (!projectile.registerHit(enemy.combatId)) return;
       enemy.applyKnockback(new Phaser.Math.Vector2(this.player.x, this.player.y), projectile.knockback);
+      this.sorcererWeaponSystem?.onHit(this.time.now, projectile, enemy, this.enemies,
+        (target, amount, source) => this.damageEnemy(target, amount, source, false));
       this.blessingSystem.onHit(this.time.now, enemy, projectile.damage, this.enemies,
         new Phaser.Math.Vector2(this.player.x, this.player.y),
         (target, amount, source) => this.damageEnemy(target, amount, source, false));

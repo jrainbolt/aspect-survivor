@@ -3,9 +3,12 @@ import type { PlayerStats, PlayerStatValues, StatModifier } from '../types/stats
 export type CharacterId = 'amazon' | 'sorcerer' | 'paladin';
 export type WeaponId = 'javelin' | 'arcane-bolt' | 'sword-shield';
 export type BlessingId = 'jupiter-spark' | 'mars-bloodletting' | 'neptune-tidal-push';
-export type SpecializationId = 'crusader' | 'templar' | 'guardian';
+export type PaladinSpecializationId = 'crusader' | 'templar' | 'guardian';
+export type SorcererSpecializationId = 'pyromancer' | 'cryomancer' | 'stormcaller';
+export type AmazonSpecializationId = 'wayfarer';
+export type SpecializationId = PaladinSpecializationId | SorcererSpecializationId | AmazonSpecializationId;
 export type RoundType = 'normal' | 'boss';
-export type DamageType = 'physical' | 'lightning' | 'bleed' | 'water' | 'holy' | 'arcane' | 'unknown';
+export type DamageType = 'physical' | 'fire' | 'ice' | 'lightning' | 'bleed' | 'water' | 'holy' | 'arcane' | 'unknown';
 
 export interface PassiveModifiers {
   moveSpeedMultiplier?: number;
@@ -29,6 +32,25 @@ export interface CharacterDefinition {
   passiveLabel: string;
   passiveModifiers: PassiveModifiers;
   visual: PlaceholderVisualConfig;
+}
+
+export type SpecializationIcon = 'blade' | 'tower-shield' | 'pike' | 'fire' | 'frost' | 'lightning' | 'javelin';
+
+export interface SpecializationSummary {
+  id: SpecializationId;
+  characterId: CharacterId;
+  displayName: string;
+  weaponName: string;
+  description: string;
+  pros: readonly string[];
+  cons: readonly string[];
+  startingBonus: string;
+  rangeLabel: string;
+  specialText: string;
+  choiceSummary: string;
+  color: number;
+  icon: SpecializationIcon;
+  statModifier: StatModifier;
 }
 
 export interface WeaponDefinition {
@@ -121,6 +143,7 @@ export interface RunState {
   blessingRerolls: number;
   permanentStatModifiers: StatModifier[];
   temporaryStatModifiers: StatModifier[];
+  heroUpgrades: string[];
   damageSources: Record<string, DamageSourceRecord>;
   runStats: RunStatsSnapshot;
   result?: 'defeat' | 'act-complete';
